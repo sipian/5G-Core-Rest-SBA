@@ -82,9 +82,7 @@ void Smf::clrstl() {
 	ue_ctx.clear();
 }
 
-
-
-void Smf::handle_create_session(struct sockaddr_in src_sock_addr, Packet pkt, UdpClient &upf_client, SctpClient &udm_client) {
+void Smf::handle_create_session(CreateSMContextRequestPacket &requestPkt, CreateSMContextResponsPacket &responsePkt, UdpClient &upf_client, SctpClient &udm_client) {
 	vector<uint64_t> tai_list;
 	uint64_t guti;
 	uint64_t imsi;
@@ -105,19 +103,20 @@ void Smf::handle_create_session(struct sockaddr_in src_sock_addr, Packet pkt, Ud
 	bool res;
 	
 	TRACE(cout << "after receiving from amf "<< endl;)
-	pkt.extract_item(guti);
+	guti = requestPkt.guti;
 	TRACE(cout << "guti:" << guti << endl;)
 	if (guti == 0) {
-		TRACE(cout << "smf_handlecreatesession:" << " zero guti " <<pkt.len << ": " << guti << endl;)
+		TRACE(cout << "smf_handlecreatesession: zero guti : " << guti << endl;)
 		g_utils.handle_type1_error(-1, "Zero guti: smf_handlecreatesession");
 	}	
 	
-	pkt.extract_item(imsi);
-	pkt.extract_item(s11_cteid_mme);
-	pkt.extract_item(eps_bearer_id);
-	pkt.extract_item(apn_in_use);
-	pkt.extract_item(tai);
-	//
+	imsi = requestPkt.imsi;
+	s11_cteid_mme = requestPkt.s11_cteid_mme;
+	eps_bearer_id = requestPkt.eps_bearer_id;
+	apn_in_use = requestPkt.apn_in_use;
+	tai = requestPkt.tai;
+
+
 	// g_sync.mlock(uectx_mux);
 	// ue_ctx[guti].s11_cteid_mme = s11_cteid_mme;
 	// ue_ctx[guti].eps_bearer_id = eps_bearer_id;
@@ -130,8 +129,8 @@ void Smf::handle_create_session(struct sockaddr_in src_sock_addr, Packet pkt, Ud
 	// imsi = ue_ctx[guti].imsi;
 	// apn_in_use = ue_ctx[guti].apn_in_use;
 	// tai = ue_ctx[guti].tai;
-	//
 
+	Packet pkt;
 	pkt.clear_pkt();
 	pkt.append_item(guti);
 	pkt.append_item(s11_cteid_mme);
@@ -160,17 +159,16 @@ void Smf::handle_create_session(struct sockaddr_in src_sock_addr, Packet pkt, Ud
 	pkt.append_item(tai);
 	pkt.prepend_gtp_hdr(2, 1, pkt.len, 0);
 	upf_client.snd(pkt);//send to upf
-	TRACE(cout << "smf_createsession:" << " create session request sent to upf: " << guti << endl;)
+	TRACE(cout << "smf_createsession: create session request sent to upf: " << guti << endl;)
 
 	upf_client.rcv(pkt);//receive response from upf
-	TRACE(cout << "smf_createsession:" << " create session response received from upf: " << guti << endl;)
+	TRACE(cout << "smf_createsession: create session response received from upf: " << guti << endl;)
 
 	pkt.extract_gtp_hdr();
 	pkt.extract_item(s11_cteid_sgw);
 	pkt.extract_item(ue_ip_addr);
 	pkt.extract_item(s1_uteid_ul);
 	
-	//
 	// g_sync.mlock(uectx_mux);
 	// ue_ctx[guti].ip_addr = ue_ip_addr;
 	// ue_ctx[guti].s11_cteid_sgw = s11_cteid_sgw;
@@ -184,7 +182,6 @@ void Smf::handle_create_session(struct sockaddr_in src_sock_addr, Packet pkt, Ud
 	// tai_list = ue_ctx[guti].tai_list;
 	// tau_timer = ue_ctx[guti].tau_timer;
 	// g_sync.munlock(uectx_mux);
-	//
 
 	pkt.clear_pkt();
 	pkt.append_item(guti);
@@ -201,31 +198,25 @@ void Smf::handle_create_session(struct sockaddr_in src_sock_addr, Packet pkt, Ud
 	pkt.extract_item(tai_list,1);
 	pkt.extract_item(tau_timer);
 
-
 	res = true;
 	tai_list_size = 1;
 
-	pkt.clear_pkt();
-	pkt.append_item(guti);
-	pkt.append_item(eps_bearer_id);
-	pkt.append_item(e_rab_id);
-	pkt.append_item(s1_uteid_ul);
-	pkt.append_item(s11_cteid_sgw);
-	pkt.append_item(k_enodeb);
-	pkt.append_item(tai_list_size);
-	pkt.append_item(tai_list);
-	pkt.append_item(tau_timer);
-	pkt.append_item(ue_ip_addr);
-	pkt.append_item(upf_s1_ip_addr);
-	pkt.append_item(upf_s1_port);
-	pkt.append_item(res);
-	pkt.prepend_gtp_hdr(2,1, pkt.len, s11_cteid_mme);
-	amf_server.snd(src_sock_addr, pkt);
-	TRACE(cout << "smf_createsession:" << " attach accept sent to amf: " << endl;)
+	responsePkt.guti = guti;
+	responsePkt.eps_bearer_id = eps_bearer_id;
+	responsePkt.e_rab_id = e_rab_id;
+	responsePkt.s1_uteid_ul = s1_uteid_ul;
+	responsePkt.s11_cteid_sgw = s11_cteid_mme;
+	responsePkt.k_enodeb = k_enodeb;
+	responsePkt.tai_list_size = tai_list_size;
+	responsePkt.tai_list = tai_list;
+	responsePkt.tau_timer = tau_timer;
+	responsePkt.ue_ip_addr = ue_ip_addr;
+	responsePkt.upf_s1_ip_addr = upf_s1_ip_addr;
+	responsePkt.upf_s1_port = upf_s1_port;
+	responsePkt.res = res;
 }
 
-
-void Smf::handle_modify_bearer(struct sockaddr_in src_sock_addr,Packet pkt, UdpClient &upf_client, SctpClient &udm_client) {
+void Smf::handle_modify_bearer(UpdateSMContextRequestPacket &requestPkt, UpdateSMContextResponsePacket &responsePkt, UdpClient &upf_client, SctpClient &udm_client) {
 	uint64_t guti;
 	uint32_t s1_uteid_dl;
 	uint32_t s11_cteid_sgw;
@@ -233,27 +224,21 @@ void Smf::handle_modify_bearer(struct sockaddr_in src_sock_addr,Packet pkt, UdpC
 	bool res;
 	string enodeb_ip_addr;
 	int enodeb_port;
-	pkt.extract_item(guti);
+
+	guti = requestPkt.guti;
 	if (guti == 0) {
-		TRACE(cout << "smf_handlemodifybearer:" << " zero guti " << pkt.len << ": " << guti << endl;		)
+		TRACE(cout << "smf_handlemodifybearer: zero guti : " << guti << endl;)
 		g_utils.handle_type1_error(-1, "Zero guti: smf_handlemodifybearer");
-	}	
+	}
 	
-	
-	pkt.extract_item(eps_bearer_id);
-	pkt.extract_item(s1_uteid_dl);
-	pkt.extract_item(g_trafmon_ip_addr);
-	pkt.extract_item(g_trafmon_port);
+	eps_bearer_id = requestPkt.eps_bearer_id;
+	s1_uteid_dl = requestPkt.s1_uteid_dl;
+	g_trafmon_ip_addr = requestPkt.g_trafmon_ip_addr;;
+	g_trafmon_port = requestPkt.g_trafmon_port;
 
 	upf_client.set_server(g_upf_smf_ip_addr, g_upf_smf_port);
 	
-	//
-	// g_sync.mlock(uectx_mux);
-	// eps_bearer_id = ue_ctx[guti].eps_bearer_id;
-	// s1_uteid_dl = ue_ctx[guti].s1_uteid_dl;
-	// s11_cteid_sgw = ue_ctx[guti].s11_cteid_sgw;
-	// g_sync.munlock(uectx_mux);		
-	//
+	Packet pkt;
 
 	pkt.clear_pkt();
 	pkt.append_item(guti);
@@ -272,26 +257,20 @@ void Smf::handle_modify_bearer(struct sockaddr_in src_sock_addr,Packet pkt, UdpC
 	pkt.append_item(g_trafmon_port);
 	pkt.prepend_gtp_hdr(2, 2, pkt.len, s11_cteid_sgw);
 	upf_client.snd(pkt);
-	TRACE(cout << "smf_handlemodifybearer:" << " modify bearer request sent to upf: " << guti << endl;)
+	TRACE(cout << "smf_handlemodifybearer: modify bearer request sent to upf: " << guti << endl;)
 
 	upf_client.rcv(pkt);
-	TRACE(cout << "smf_handlemodifybearer:" << " modify bearer response received from upf: " << guti << endl;)
+	TRACE(cout << "smf_handlemodifybearer: modify bearer response received from upf: " << guti << endl;)
 
 	pkt.extract_gtp_hdr();
 	pkt.extract_item(res);
 	if (res == false) {
-		TRACE(cout << "smf_handlemodifybearer:" << " modify bearer failure: " << guti << endl;)
+		TRACE(cout << "smf_handlemodifybearer: modify bearer failure: " << guti << endl;)
 	}
-	else {
-		pkt.clear_pkt();
-		pkt.append_item(res);
-		pkt.prepend_gtp_hdr(2,2, pkt.len, s11_cteid_sgw);
-
-		amf_server.snd(src_sock_addr, pkt);
-	}		
+	responsePkt.res = res;
 }
 
-void Smf::handle_detach( struct sockaddr_in src_sock_addr, Packet pkt, UdpClient &upf_client, SctpClient &udm_client) {
+void Smf::handle_detach(ReleaseSMContextRequestPacket &requestPkt, ReleaseSMContextResponsePacket &responsePkt, UdpClient &upf_client, SctpClient &udm_client) {
 	uint64_t guti;
 	uint64_t k_nas_enc;
 	uint64_t k_nas_int;
@@ -302,13 +281,13 @@ void Smf::handle_detach( struct sockaddr_in src_sock_addr, Packet pkt, UdpClient
 	uint8_t eps_bearer_id;
 	bool res;
 	
-	pkt.extract_item(guti);
+	guti = requestPkt.guti;
 	if (guti == 0) {
-		TRACE(cout << "smf_handledetach:" << " zero guti " << " " << pkt.len << ": " << guti << endl;)
+		TRACE(cout << "smf_handledetach: zero guti  : " << guti << endl;)
 		g_utils.handle_type1_error(-1, "Zero guti: smf_handledetach");
 	}
-	pkt.extract_item(eps_bearer_id);
-	pkt.extract_item(tai);
+	eps_bearer_id = requestPkt.eps_bearer_id;
+	tai = requestPkt.tai;
 
 	upf_client.set_server(g_upf_smf_ip_addr, g_upf_smf_port);
 	//
@@ -317,6 +296,7 @@ void Smf::handle_detach( struct sockaddr_in src_sock_addr, Packet pkt, UdpClient
 	// g_sync.munlock(uectx_mux);
 	//
 
+	Packet pkt;
 	pkt.clear_pkt();
 	pkt.append_item(guti);
 	pkt.prepend_diameter_hdr(21, pkt.len);
@@ -325,34 +305,29 @@ void Smf::handle_detach( struct sockaddr_in src_sock_addr, Packet pkt, UdpClient
 	udm_client.rcv(pkt);
 	pkt.extract_item(s11_cteid_sgw);
 
-	TRACE(cout << "smf_handledetach:" << " detach req received from amf: " << pkt.len << ": " << guti << endl;)
-	
+	TRACE(cout << "smf_handledetach: detach req received from amf: " << pkt.len << ": " << guti << endl;)
 	
 	pkt.clear_pkt();
 	pkt.append_item(eps_bearer_id);
 	pkt.append_item(tai);
 	pkt.prepend_gtp_hdr(2, 3, pkt.len, s11_cteid_sgw);
 	upf_client.snd(pkt);
-	TRACE(cout << "smf_handledetach:" << " detach request sent to upf: " << guti << endl;)
+	TRACE(cout << "smf_handledetach: detach request sent to upf: " << guti << endl;)
 
 	upf_client.rcv(pkt);
-	TRACE(cout << "smf_handledetach:" << " detach response received from upf: " << guti << endl;)
+	TRACE(cout << "smf_handledetach: detach response received from upf: " << guti << endl;)
 
 	pkt.extract_gtp_hdr();
 	pkt.extract_item(res);
 	if (res == false) {
-		TRACE(cout << "smf_handledetach:" << " upf detach failure: " << guti << endl;)
+		TRACE(cout << "smf_handledetach: upf detach failure: " << guti << endl;)
 		return;		
 	}
-	pkt.clear_pkt();
-	pkt.append_item(res);
-	
-	pkt.prepend_gtp_hdr(2, 3, pkt.len, s11_cteid_sgw);
-	amf_server.snd(src_sock_addr, pkt);
-	TRACE(cout << "smf_handledetach:" << " detach complete sent to amf: " << pkt.len << ": " << guti << endl;)
 
-	TRACE(cout << "smf_handledetach:" << " ue entry removed: " << guti << endl;)
-	TRACE(cout << "smf_handledetach:" << " detach successful: " << guti << endl;)
+	TRACE(cout << "smf_handledetach: ue entry removed: " << guti << endl;)
+	TRACE(cout << "smf_handledetach: detach successful: " << guti << endl;)
+
+	responsePkt.res = res;
 }
 
 

@@ -76,7 +76,7 @@ int handle_ue(int conn_fd, int worker_id) {
 				res = g_amf.handle_security_mode_complete(conn_fd, pkt, udm_clients[worker_id]);
 				if (res) {
 				        g_amf.handle_location_update(pkt, ausf_clients[worker_id], udm_clients[worker_id]);
-						g_amf.handle_create_session(conn_fd, pkt, smf_clients[worker_id], udm_clients[worker_id]);
+						g_amf.handle_create_session(conn_fd, pkt, smf_clients[worker_id], udm_clients[worker_id], worker_id);
 				}
 				break;
 
@@ -84,13 +84,13 @@ int handle_ue(int conn_fd, int worker_id) {
 			case 4: 
 				TRACE(cout << "amfserver_handleue:" << " case 4: attach complete" << endl;)
 				g_amf.handle_attach_complete(pkt, udm_clients[worker_id]);
-				g_amf.handle_modify_bearer(pkt, smf_clients[worker_id], udm_clients[worker_id]);
+				g_amf.handle_modify_bearer(pkt, smf_clients[worker_id], udm_clients[worker_id], worker_id);
 				break;
 
 			/* Detach request */
 			case 5: 
 				TRACE(cout << "amfserver_handleue:" << " case 5: detach request" << endl;)
-				g_amf.handle_detach(conn_fd, pkt, smf_clients[worker_id], udm_clients[worker_id]);
+				g_amf.handle_detach(conn_fd, pkt, smf_clients[worker_id], udm_clients[worker_id], worker_id);
 				break;
 			case 7:
 				cout << "amfserver_handleue:" << " case 7:" << endl;

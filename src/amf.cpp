@@ -124,7 +124,7 @@ uint32_t Amf::get_s11cteidamf(uint64_t guti) {
 	return s11_cteid_amf;
 }
 
-void Amf::handle_initial_attach(int conn_fd, Packet pkt, SctpClient &ausf_client, SctpClient &udm_client,int worker_id) {
+void Amf::handle_initial_attach(int conn_fd, Packet pkt, SctpClient &ausf_client, SctpClient &udm_client, int worker_id) {
 
 	uint64_t imsi;
 	uint64_t tai;
@@ -140,8 +140,8 @@ void Amf::handle_initial_attach(int conn_fd, Packet pkt, SctpClient &ausf_client
 	uint64_t guti;
 	uint64_t num_autn_vectors;
 
-    boost::system::error_code ec;
-    boost::asio::io_service io_service;
+	boost::system::error_code ec;
+	boost::asio::io_service io_service;
 
 	num_autn_vectors = 1;
 	pkt.extract_item(imsi);
@@ -160,11 +160,9 @@ void Amf::handle_initial_attach(int conn_fd, Packet pkt, SctpClient &ausf_client
 	s1amf_id[mme_s1ap_ue_id] = guti;
 	g_sync.munlock(s1amfid_mux);
 
-//
 	// g_sync.mlock(uectx_mux);
 	// ue_ctx[guti].init(imsi, enodeb_s1ap_ue_id, mme_s1ap_ue_id, tai, nw_capability);
 	// g_sync.munlock(uectx_mux);
-//
 
 	pkt.clear_pkt();
 	pkt.append_item(guti);
@@ -179,113 +177,80 @@ void Amf::handle_initial_attach(int conn_fd, Packet pkt, SctpClient &ausf_client
 	nw_type = ue_ctx[guti].nw_type;
 	TRACE(cout << "amf_handleinitialattach:" << ":ue entry added: " << guti << endl;)
 	
-
-	//pkt.clear_pkt();
-	//pkt.append_item(imsi);
-	//pkt.append_item(amf_ids.plmn_id);
-	//pkt.append_item(num_autn_vectors);
-	//pkt.append_item(nw_type);
-	//pkt.prepend_diameter_hdr(1, pkt.len);
-	//ausf_client.snd(pkt);	
-
-
-	// will send these parameters to ausf as json using HTTP2 REST
-	 // ---- create from scratch ----
-    //JSON Message Creation
-
-	Json::Value restPkt;   // ...making json object with all the required fields...
-
-	restPkt["msg_type"] = to_string(1);
-	restPkt["imsi"] =  to_string(imsi);
-	restPkt["plmn_id"] = to_string(amf_ids.plmn_id);
-	restPkt["num_autn_vectors"] = to_string(num_autn_vectors);
-	restPkt["nw_type"] = to_string(nw_type);
+	Json::Value requestPkt;
+	requestPkt["imsi"] = to_string(imsi);
+	requestPkt["plmn_id"] = to_string(amf_ids.plmn_id);
+	requestPkt["num_autn_vectors"] = to_string(num_autn_vectors);
+	requestPkt["nw_type"] = to_string(nw_type);
 
 	Json::FastWriter fastWriter;
-	
-	//Till here complete Message is crafted in JSON Format
-	//Now we will convert it to string and send it 
+	std::string jsonPkt = fastWriter.write(requestPkt);
+	std::string jsonResponsePkt = "";
 
-    std::string jsonPkt = fastWriter.write(restPkt);
+	session sess(io_service, g_ausf_ip_addr, to_string(AUSF_AMF_PORT_START_RANGE + worker_id));
 
-	 // connect to localhost:300+worker_id
-	session sess(io_service, g_ausf_ip_addr, "400"+to_string(worker_id));
-    
-	sess.on_connect([&sess,&worker_id,&jsonPkt](tcp::resolver::iterator endpoint_it) 
-	{
-    	boost::system::error_code ec;
-    	string port_id = to_string(worker_id);
-		string uri = "http://"+g_ausf_ip_addr+":400"+port_id+"/Nausf_UEAuthentication";    
-		cout<<"Sent json packet is: "<<jsonPkt<<endl;
-    	auto req = sess.submit(ec, "POST",uri , jsonPkt);
-    
-    	req->on_response([&jsonPkt,&sess](const response &res) 
-		{
-			res.on_data([&jsonPkt,&sess](const uint8_t *data, std::size_t len) 
-			{
-				if(len > 0){
+	sess.on_connect([&sess, &worker_id, &jsonPkt, &jsonResponsePkt](tcp::resolver::iterator endpoint_it) {
+		boost::system::error_code ec;
+		string port_id = to_string(AUSF_AMF_PORT_START_RANGE + worker_id);
+		string uri = "http://" + g_ausf_ip_addr + ":" + port_id + "/Nausf_UEAuthentication";
+		TRACE(cout << "amf_handleinitialattach :: Connecting to " << uri << "\n\tPOST Request\n\tPayload: " << jsonPkt << endl;)
+		auto req = sess.submit(ec, "POST", uri, jsonPkt);
+
+		req->on_response([&jsonPkt, &uri, &jsonResponsePkt, &sess](const response &res) {
+			//TODO handle response errors
+			if(res.status_code() != 200) {
+				cout << "amf_handleinitialattach :: Error Status Code Received from " << uri << " : " << res.status_code() << endl;
+			}
+			res.on_data([&jsonPkt, &jsonResponsePkt, &sess](const uint8_t *data, std::size_t len) {
+				if (len > 0)
+				{
 					const char *s = "";
 					s = reinterpret_cast<const char *>(data);
-
-					jsonPkt.assign(s,len);
-					std::cout<<"Response received as "<<jsonPkt<<endl;
-					//by now the required response will be present 	
+					// collecting all the data
+					if(len > 0) {
+						jsonResponsePkt.append(s, len);
+					}
 				}
-				
 			});
-       
-    	});
-    	req->on_close([&sess](uint32_t error_code) 
-		{
-      		//shutdown session after first request was done.
-      		sess.shutdown();
-    	});
-      	// shutdown session after first request was done.
-     
-    });
+		});
+		req->on_close([&jsonResponsePkt, &uri, &sess](uint32_t error_code) {
+			//shutdown session after first request was done.
+			sess.shutdown();
+		});
+	});
 
-   sess.on_error([](const boost::system::error_code &ec) {
-       std::cerr << "error: " << ec.message() << std::endl;
-   });
+	sess.on_error([](const boost::system::error_code &ec) {
+		std::cerr << "error: " << ec.message() << std::endl;
+	});
 
-    io_service.run();
+	io_service.run();
 
-	TRACE(cout << "amf_handleinitialattach:" << " request sent to ausf: " << guti << endl;)
+	TRACE(cout << "amf_handleinitialattach :: Received from : " << jsonResponsePkt << endl;)
+	TRACE(cout << "amf_handleinitialattach :: " << " request sent to ausf: " << guti << endl;)
 
-	//ausf_client.rcv(pkt);
+	Json::Value jsonRes;
+	Json::Reader reader;
 
-	//pkt.extract_diameter_hdr();
-	//pkt.extract_item(autn_num);
-	//pkt.extract_item(rand_num);
-	//pkt.extract_item(xres);
-	//pkt.extract_item(k_asme);
-    Json::Value jsonRes;
-    Json::Reader reader;
-	
-    bool parsingSuccessful = reader.parse(jsonPkt, jsonRes);
+	bool parsingSuccessful = reader.parse(jsonResponsePkt, jsonRes);
 	std::string autn_string = jsonRes["autn_num"].asString();
 	std::istringstream iss(autn_string);
 	iss >> autn_num;
-    iss.clear();
-  
-    std::string rand_string = jsonRes["rand_num"].asString();
+	iss.clear();
+
+	std::string rand_string = jsonRes["rand_num"].asString();
 	iss.str(rand_string);
 	iss >> rand_num;
-    iss.clear();
+	iss.clear();
 
-    std::string xres_string = jsonRes["xres"].asString();
+	std::string xres_string = jsonRes["xres"].asString();
 	iss.str(xres_string);
 	iss >> xres;
-    iss.clear();
+	iss.clear();
 
-    std::string kasme_string = jsonRes["k_asme"].asString();
+	std::string kasme_string = jsonRes["k_asme"].asString();
 	iss.str(kasme_string);
 	iss >> k_asme;
-    iss.clear();
-
-
-
-
+	iss.clear();
 
 	// g_sync.mlock(uectx_mux);
 	// ue_ctx[guti].xres = xres;
@@ -293,7 +258,7 @@ void Amf::handle_initial_attach(int conn_fd, Packet pkt, SctpClient &ausf_client
 	// ksi_asme = 1;
 	// ue_ctx[guti].ksi_asme = ksi_asme;
 	// g_sync.munlock(uectx_mux);
-//
+	//
 	// will send the UPDATE request to the udm for updation of ue_context.
 	pkt.clear_pkt();
 	pkt.append_item(guti);
@@ -549,8 +514,8 @@ void Amf::handle_location_update(Packet pkt, SctpClient &ausf_client, SctpClient
 	g_sync.munlock(uectx_mux);
 }
 
-void Amf::handle_create_session(int conn_fd, Packet pkt, UdpClient &smf_client, SctpClient &udm_client){
-	
+void Amf::handle_create_session(int conn_fd, Packet pkt, UdpClient &smf_client, SctpClient &udm_client, int worker_id) {
+
 	vector<uint64_t> tai_list;
 	uint64_t guti;
 	uint64_t imsi;
@@ -574,14 +539,14 @@ void Amf::handle_create_session(int conn_fd, Packet pkt, UdpClient &smf_client, 
 
 	guti = get_guti(pkt);
 	if (guti == 0) {
-		TRACE(cout << "amf_createsession:" << " zero guti " << pkt.s1ap_hdr.mme_s1ap_ue_id << " " << pkt.len << ": " << guti << endl;		)
+		TRACE(cout << "amf_createsession:" << " zero guti " << pkt.s1ap_hdr.mme_s1ap_ue_id << " " << pkt.len << ": " << guti << endl;)
 		g_utils.handle_type1_error(-1, "Zero guti: amf_handlecreatesession");
-	}	
-	
-	eps_bearer_id = 5;
-	set_upf_info(guti,udm_client);
+	}
 
-//
+	eps_bearer_id = 5;
+	set_upf_info(guti, udm_client);
+
+	//
 	g_sync.mlock(uectx_mux);
 	ue_ctx[guti].s11_cteid_amf = get_s11cteidamf(guti);
 	ue_ctx[guti].eps_bearer_id = eps_bearer_id;
@@ -593,13 +558,13 @@ void Amf::handle_create_session(int conn_fd, Packet pkt, UdpClient &smf_client, 
 	// apn_in_use = ue_ctx[guti].apn_in_use;
 	// tai = ue_ctx[guti].tai;
 	g_sync.munlock(uectx_mux);
-//
+	//
 
 	pkt.clear_pkt();
 	pkt.append_item(guti);
 	pkt.append_item(get_s11cteidamf(guti));
 	pkt.append_item(eps_bearer_id);
-	pkt.prepend_diameter_hdr(11, pkt.len);
+	pkt.prepend_diameter_hdr(11,pkt.len);
 	udm_client.snd(pkt);
 
 	udm_client.rcv(pkt);
@@ -611,35 +576,166 @@ void Amf::handle_create_session(int conn_fd, Packet pkt, UdpClient &smf_client, 
 	pkt.extract_item(apn_in_use);
 	pkt.extract_item(tai);
 
-	pkt.clear_pkt();
-	pkt.append_item(guti);
-	pkt.append_item(imsi);
-	pkt.append_item(s11_cteid_amf);
-	pkt.append_item(eps_bearer_id);
-	pkt.append_item(apn_in_use);
-	pkt.append_item(tai);
-	pkt.prepend_gtp_hdr(2,1,pkt.len,0);
-		
-	smf_client.snd(pkt);
 	TRACE(cout << "amf_createsession:" << " create session request sent to smf: " << guti << endl;)
 
-	smf_client.rcv(pkt);
+	Json::Value requestPkt;
+	requestPkt["guti"] = to_string(guti);
+	requestPkt["imsi"] = to_string(imsi);
+	requestPkt["s11_cteid_mme"] = to_string(s11_cteid_amf);
+	requestPkt["eps_bearer_id"] = to_string(eps_bearer_id);
+	requestPkt["apn_in_use"] = to_string(apn_in_use);
+	requestPkt["tai"] = to_string(tai);
+
+	Json::FastWriter fastWriter;
+	std::string jsonPkt = fastWriter.write(requestPkt);
+	std::string jsonResponsePkt = "";
+
+	boost::asio::io_service io_service;
+	session sess(io_service, smf_amf_ip_addr, to_string(SMF_AMF_PORT_START_RANGE + worker_id));
+
+	sess.on_connect([&sess, &worker_id, &jsonPkt, &jsonResponsePkt](tcp::resolver::iterator endpoint_it) {
+		boost::system::error_code ec;
+		string port_id = to_string(SMF_AMF_PORT_START_RANGE + worker_id);
+		string uri = "http://" + smf_amf_ip_addr + ":" + port_id + "/Nsmf_PDUSession/CreateSMContext";
+		cout << "amf_createsession: Connecting to " << uri << "\n\tPOST Request\n\tPayload: " << jsonPkt << endl;
+		auto req = sess.submit(ec, "POST", uri, jsonPkt);
+
+		req->on_response([&jsonPkt, &uri, &jsonResponsePkt, &sess](const response &res) {
+			//TODO handle respone errors
+			if(res.status_code() != 200) {
+				cout << "amf_createsession: Connecting to " << uri << " failed with Status_Code : " << res.status_code() << endl;
+			}
+			res.on_data([&jsonPkt, &jsonResponsePkt, &sess](const uint8_t *data, std::size_t len) {
+				if (len > 0)
+				{
+					const char *s = "";
+					s = reinterpret_cast<const char *>(data);
+					// collecting all the data
+					if(len > 0) {
+						jsonResponsePkt.append(s, len);
+					}
+				}
+			});
+		});
+		req->on_close([&jsonResponsePkt, &uri, &sess](uint32_t error_code) {
+			//shutdown session after first request was done.
+			sess.shutdown();
+		});
+	});
+
+	sess.on_error([](const boost::system::error_code &ec) {
+		std::cerr << "error: " << ec.message() << std::endl;
+	});
+
+	io_service.run();
+
+	TRACE(cout << "amf_createsession :: Received from SMF : " << jsonResponsePkt << endl;)
 	TRACE(cout << "amf_createsession:" << " create session response received smf: " << guti << endl;)
-	
-	pkt.extract_gtp_hdr();
-	pkt.extract_item(guti);
-	pkt.extract_item(eps_bearer_id);
-	pkt.extract_item(e_rab_id);
-	pkt.extract_item(s1_uteid_ul);
-	pkt.extract_item(s11_cteid_upf);
-	pkt.extract_item(k_enodeb);
-	pkt.extract_item(tai_list_size);
-	pkt.extract_item(tai_list,tai_list_size);
-	pkt.extract_item(tau_timer);
-	pkt.extract_item(ue_ip_addr);
-	pkt.extract_item(g_upf_s1_ip_addr);
-	pkt.extract_item(g_upf_s1_port);
-	pkt.extract_item(res);
+
+	Json::Value jsonRes;
+	Json::Reader reader;
+
+	std::string pktString;
+	std::istringstream iss;
+	bool parsingSuccessful = reader.parse(jsonResponsePkt, jsonRes);
+
+	//TODO handle respone errors
+	if(parsingSuccessful == false) {
+		cout << "amf_createsession: Response received from SMF parsing failed" << endl;
+	}
+
+	if(jsonRes.isMember("guti")) {
+		pktString = jsonRes["guti"].asString();
+		iss.str(pktString);
+		iss >> guti;
+		iss.clear();
+	}
+
+	if(jsonRes.isMember("eps_bearer_id")) {
+		pktString = jsonRes["eps_bearer_id"].asString();
+		iss.str(pktString);
+		iss >> eps_bearer_id;
+		iss.clear();
+	}
+
+	if(jsonRes.isMember("e_rab_id")) {
+		pktString = jsonRes["e_rab_id"].asString();
+		iss.str(pktString);
+		iss >> e_rab_id;
+		iss.clear();
+	}
+
+	if(jsonRes.isMember("s1_uteid_ul")) {
+		pktString = jsonRes["s1_uteid_ul"].asString();
+		iss.str(pktString);
+		iss >> s1_uteid_ul;
+		iss.clear();
+	}
+
+	if(jsonRes.isMember("s11_cteid_sgw")) {
+		pktString = jsonRes["s11_cteid_sgw"].asString();
+		iss.str(pktString);
+		iss >> s11_cteid_upf;
+		iss.clear();
+	}
+
+	if(jsonRes.isMember("k_enodeb")) {
+		pktString = jsonRes["k_enodeb"].asString();
+		iss.str(pktString);
+		iss >> k_enodeb;
+		iss.clear();
+	}
+
+	if(jsonRes.isMember("tai_list_size")) {
+		pktString = jsonRes["tai_list_size"].asString();
+		iss.str(pktString);
+		iss >> tai_list_size;
+		iss.clear();
+	}
+
+	if(jsonRes.isMember("tai_list")) {
+		tai_list.clear();
+		Json::Value taiListVals = jsonRes["tai_list"];
+		uint64_t taiListElem;
+		for( Json::ValueIterator itr = taiListVals.begin() ; itr != taiListVals.end() ; itr++ ) {
+			pktString = itr->asString();
+			iss.str(pktString);
+			iss >> taiListElem;
+			iss.clear();
+			tai_list.push_back(taiListElem);
+		}
+	}
+
+	if(jsonRes.isMember("tau_timer")) {
+		pktString = jsonRes["tau_timer"].asString();
+		iss.str(pktString);
+		iss >> tau_timer;
+		iss.clear();
+	}
+
+	if(jsonRes.isMember("ue_ip_addr")) {
+		ue_ip_addr = jsonRes["ue_ip_addr"].asString();
+	}
+
+	if(jsonRes.isMember("upf_s1_ip_addr")) {
+		g_upf_s1_ip_addr = jsonRes["upf_s1_ip_addr"].asString();
+	}
+
+	if(jsonRes.isMember("upf_s1_port")) {
+		pktString = jsonRes["upf_s1_port"].asString();
+		iss.str(pktString);
+		iss >> g_upf_s1_port;
+		iss.clear();
+	}
+
+	if(jsonRes.isMember("res")) {
+		pktString = jsonRes["res"].asString();
+		iss.str(pktString);
+		iss >> res;
+		iss.clear();
+	}
+
+	TRACE(cout << "amf_createsession:" << " create session IP addr: " << g_upf_s1_ip_addr << ":" << g_upf_s1_port << endl;)
 
 	//
 	// g_sync.mlock(uectx_mux);
@@ -675,14 +771,14 @@ void Amf::handle_create_session(int conn_fd, Packet pkt, UdpClient &smf_client, 
 	pkt.extract_item(k_enodeb);
 	pkt.extract_item(nw_capability);
 	pkt.extract_item(tai_list_size);
-	pkt.extract_item(tai_list,tai_list_size);
+	pkt.extract_item(tai_list, tai_list_size);
 	pkt.extract_item(tau_timer);
 	pkt.extract_item(k_nas_enc);
 	pkt.extract_item(k_nas_int);
-	
+
 	res = true;
 	tai_list_size = 1;
-		
+
 	pkt.clear_pkt();
 	pkt.append_item(guti);
 	pkt.append_item(eps_bearer_id);
@@ -698,7 +794,6 @@ void Amf::handle_create_session(int conn_fd, Packet pkt, UdpClient &smf_client, 
 	pkt.append_item(g_upf_s1_port);
 	pkt.append_item(res);
 
-
 	if (ENC_ON) {
 		g_crypt.enc(pkt, k_nas_enc);
 	}
@@ -706,11 +801,9 @@ void Amf::handle_create_session(int conn_fd, Packet pkt, UdpClient &smf_client, 
 		g_integrity.add_hmac(pkt, k_nas_int);
 	}
 	pkt.prepend_s1ap_hdr(3, pkt.len, pkt.s1ap_hdr.enodeb_s1ap_ue_id, pkt.s1ap_hdr.mme_s1ap_ue_id);
-    server.snd(conn_fd, pkt);
+	server.snd(conn_fd, pkt);
 	TRACE(cout << "amf_createsession:" << " attach accept sent to ue: " << pkt.len << ": " << guti << endl;)
-
 }
-
 
 void Amf::handle_attach_complete(Packet pkt, SctpClient &udm_client) {
 	uint64_t guti;
@@ -742,7 +835,6 @@ void Amf::handle_attach_complete(Packet pkt, SctpClient &udm_client) {
 	pkt1.extract_item(k_nas_enc);
 	pkt1.extract_item(k_nas_int);
 
-
 	TRACE(cout << "amf_handleattachcomplete:" << " attach complete received: " << pkt.len << ": " << guti << endl;)
 
 	if (HMAC_ON) {
@@ -766,26 +858,25 @@ void Amf::handle_attach_complete(Packet pkt, SctpClient &udm_client) {
 	pkt1.clear_pkt();
 	pkt1.append_item(guti);
 	pkt1.append_item(s1_uteid_dl);
-	pkt1.prepend_diameter_hdr(14,pkt1.len);
+	pkt1.prepend_diameter_hdr(14, pkt1.len);
 	udm_client.snd(pkt1);
 	TRACE(cout << "amf_handleattachcomplete:" << " attach completed: " << guti << endl;)
 }
 
+void Amf::handle_modify_bearer(Packet pkt, UdpClient &smf_client, SctpClient &udm_client, int worker_id) {
 
-
-void Amf::handle_modify_bearer(Packet pkt, UdpClient &smf_client, SctpClient &udm_client) {
 	uint64_t guti;
 	uint32_t s1_uteid_dl;
 	uint32_t s11_cteid_upf;
 	uint8_t eps_bearer_id;
 	bool res;
-	
+
 	guti = get_guti(pkt);
 	if (guti == 0) {
-		TRACE(cout << "amf_handlemodifybearer:" << " zero guti " << pkt.s1ap_hdr.mme_s1ap_ue_id << " " << pkt.len << ": " << guti << endl;		)
+		TRACE(cout << "amf_handlemodifybearer:" << " zero guti " << pkt.s1ap_hdr.mme_s1ap_ue_id << " " << pkt.len << ": " << guti << endl;)
 		g_utils.handle_type1_error(-1, "Zero guti: amf_handlemodifybearer");
-	}	
-	
+	}
+
 	//
 	// g_sync.mlock(uectx_mux);
 	// eps_bearer_id = ue_ctx[guti].eps_bearer_id;
@@ -796,7 +887,7 @@ void Amf::handle_modify_bearer(Packet pkt, UdpClient &smf_client, SctpClient &ud
 
 	pkt.clear_pkt();
 	pkt.append_item(guti);
-	pkt.prepend_diameter_hdr(15, pkt.len);
+	pkt.prepend_diameter_hdr(15,pkt.len);
 	udm_client.snd(pkt);
 
 	udm_client.rcv(pkt);
@@ -804,23 +895,83 @@ void Amf::handle_modify_bearer(Packet pkt, UdpClient &smf_client, SctpClient &ud
 	pkt.extract_item(s1_uteid_dl);
 	pkt.extract_item(s11_cteid_upf);
 
-	pkt.clear_pkt();
-	pkt.append_item(guti);
-	pkt.append_item(eps_bearer_id);
-	pkt.append_item(s1_uteid_dl);
-	pkt.append_item(g_trafmon_ip_addr);
-	pkt.append_item(g_trafmon_port);
-	pkt.prepend_gtp_hdr(2, 2, pkt.len, s11_cteid_upf);
-	smf_client.snd(pkt);
 	TRACE(cout << "amf_handlemodifybearer:" << " modify bearer request sent to smf: " << guti << endl;)
 
-	smf_client.rcv(pkt);
+	Json::Value requestPkt;
+	requestPkt["guti"] = to_string(guti);
+	requestPkt["s1_uteid_dl"] = to_string(s1_uteid_dl);
+	requestPkt["eps_bearer_id"] = to_string(eps_bearer_id);
+	requestPkt["g_trafmon_ip_addr"] = g_trafmon_ip_addr;
+	requestPkt["g_trafmon_port"] = to_string(g_trafmon_port);
+
+	Json::FastWriter fastWriter;
+	std::string jsonPkt = fastWriter.write(requestPkt);
+	std::string jsonResponsePkt = "";
+
+	boost::asio::io_service io_service;
+	session sess(io_service, smf_amf_ip_addr, to_string(SMF_AMF_PORT_START_RANGE + worker_id));
+
+	sess.on_connect([&sess, &worker_id, &jsonPkt, &jsonResponsePkt](tcp::resolver::iterator endpoint_it) {
+		boost::system::error_code ec;
+		string port_id = to_string(SMF_AMF_PORT_START_RANGE + worker_id);
+		string uri = "http://" + smf_amf_ip_addr + ":" + port_id + "/Nsmf_PDUSession/UpdateSMContext";
+		cout << "Connecting to " << uri << "\n\tPOST Request\n\tPayload: " << jsonPkt << endl;
+		auto req = sess.submit(ec, "POST", uri, jsonPkt);
+
+		req->on_response([&jsonPkt, &uri, &jsonResponsePkt, &sess](const response &res) {
+			//TODO handle response errors
+			if(res.status_code() != 200) {
+				TRACE(cout << "ERROR << amf_handlemodifybearer:" << " modify bearer failure: " << "Connecting to " << uri << " failed with Status_Code : " << res.status_code() << endl;)
+			}
+			res.on_data([&jsonPkt, &jsonResponsePkt, &sess](const uint8_t *data, std::size_t len) {
+				if (len > 0)
+				{
+					const char *s = "";
+					s = reinterpret_cast<const char *>(data);
+					// collecting all the data
+					if(len > 0) {
+						jsonResponsePkt.append(s, len);
+					}
+				}
+			});
+		});
+		req->on_close([&jsonResponsePkt, &uri, &sess](uint32_t error_code) {
+			//shutdown session after first request was done.
+			sess.shutdown();
+		});
+	});
+
+	sess.on_error([](const boost::system::error_code &ec) {
+		std::cerr << "error: " << ec.message() << std::endl;
+	});
+
+	io_service.run();
+
+	TRACE(cout << "amf_handlemodifybearer :: Received from SMF : " << jsonResponsePkt << endl;)
 	TRACE(cout << "amf_handlemodifybearer:" << " modify bearer response received from smf: " << guti << endl;)
 
-	pkt.extract_gtp_hdr();
-	pkt.extract_item(res);
+	Json::Value jsonRes;
+	Json::Reader reader;
+
+	std::string pktString;
+	std::istringstream iss;
+	bool parsingSuccessful = reader.parse(jsonResponsePkt, jsonRes);
+
+	//TODO handle response errors
+	if(parsingSuccessful == false) {
+		TRACE(cout << "ERROR :: amf_handlemodifybearer:" << " modify bearer failure: JSON parsing failed" << endl;)
+	}
+
+	res = false; 		// Default res failed
+	if(jsonRes.isMember("res")) {
+		pktString = jsonRes["res"].asString();
+		iss.str(pktString);
+		iss >> res;
+		iss.clear();
+	}
+
 	if (res == false) {
-		TRACE(cout << "amf_handlemodifybearer:" << " modify bearer failure: " << guti << endl;)
+		TRACE(cout << "ERROR :: amf_handlemodifybearer:" << " modify bearer failure: " << guti << endl;)
 	}
 	else {
 		//
@@ -828,12 +979,9 @@ void Amf::handle_modify_bearer(Packet pkt, UdpClient &smf_client, SctpClient &ud
 		ue_ctx[guti].ecm_state = 1;
 		g_sync.munlock(uectx_mux);
 		//
-		TRACE(cout << "amf_handlemodifybearer:" << " eps session setup success: " << guti << endl;		)
+		TRACE(cout<<"amf_handlemodifybearer:" << " eps session setup success: " << guti << endl;)
 	}
 }
-
-
-
 
 /* handover changes start */
 void Amf::handle_handover(Packet pkt) {
@@ -1001,7 +1149,8 @@ void Amf::teardown_indirect_tunnel(Packet pkt) {
 		cout << "tear down complted:" << " " << endl;
 }
 
-void Amf::handle_detach(int conn_fd, Packet pkt, UdpClient &smf_client, SctpClient &udm_client) {
+void Amf::handle_detach(int conn_fd, Packet pkt, UdpClient &smf_client, SctpClient &udm_client, int worker_id) {
+
 	uint64_t guti;
 	uint64_t k_nas_enc;
 	uint64_t k_nas_int;
@@ -1011,7 +1160,7 @@ void Amf::handle_detach(int conn_fd, Packet pkt, UdpClient &smf_client, SctpClie
 	uint32_t s11_cteid_upf;
 	uint8_t eps_bearer_id;
 	bool res;
-	
+
 	guti = get_guti(pkt);
 	if (guti == 0) {
 		TRACE(cout << "amf_handledetach:" << " zero guti " << pkt.s1ap_hdr.mme_s1ap_ue_id << " " << pkt.len << ": " << guti << endl;)
@@ -1030,7 +1179,7 @@ void Amf::handle_detach(int conn_fd, Packet pkt, UdpClient &smf_client, SctpClie
 	Packet pkt1;
 	pkt1.clear_pkt();
 	pkt1.append_item(guti);
-	pkt1.prepend_diameter_hdr(16, pkt.len);
+	pkt1.prepend_diameter_hdr(16,pkt.len);
 	udm_client.snd(pkt);
 
 	udm_client.rcv(pkt1);
@@ -1040,13 +1189,14 @@ void Amf::handle_detach(int conn_fd, Packet pkt, UdpClient &smf_client, SctpClie
 	pkt1.extract_item(tai);
 	pkt1.extract_item(s11_cteid_upf);
 
-
 	TRACE(cout << "amf_handledetach:" << " detach req received: " << pkt.len << ": " << guti << endl;)
 
 	if (HMAC_ON) {
 		res = g_integrity.hmac_check(pkt, k_nas_int);
-		if (res == false) {
-			TRACE(cout << "amf_handledetach:" << " hmac detach failure: " << guti << endl;)
+		if (res == false)
+		{
+			TRACE(cout << "amf_handledetach:"
+					   << " hmac detach failure: " << guti << endl;)
 			g_utils.handle_type1_error(-1, "hmac failure: amf_handledetach");
 		}
 	}
@@ -1055,28 +1205,90 @@ void Amf::handle_detach(int conn_fd, Packet pkt, UdpClient &smf_client, SctpClie
 	}
 	pkt.extract_item(guti); /* It should be the same as that found in the first step */
 	pkt.extract_item(ksi_asme);
-	pkt.extract_item(detach_type);	
-	
-	pkt.clear_pkt();
-	pkt.append_item(guti);
-	pkt.append_item(eps_bearer_id);
-	pkt.append_item(tai);
-	pkt.prepend_gtp_hdr(2, 3, pkt.len, s11_cteid_upf);
-	smf_client.snd(pkt);
+	pkt.extract_item(detach_type);
+
 	TRACE(cout << "amf_handledetach:" << " detach request sent to smf: " << guti << endl;)
 
-	smf_client.rcv(pkt);
+	Json::Value requestPkt;
+	requestPkt["guti"] = to_string(guti);
+	requestPkt["eps_bearer_id"] = to_string(eps_bearer_id);
+	requestPkt["tai"] = to_string(tai);
+
+	Json::FastWriter fastWriter;
+	std::string jsonPkt = fastWriter.write(requestPkt);
+	std::string jsonResponsePkt = "";
+
+	boost::asio::io_service io_service;
+	session sess(io_service, smf_amf_ip_addr, to_string(SMF_AMF_PORT_START_RANGE + worker_id));
+
+	sess.on_connect([&sess, &worker_id, &jsonPkt, &jsonResponsePkt](tcp::resolver::iterator endpoint_it) {
+		boost::system::error_code ec;
+		string port_id = to_string(SMF_AMF_PORT_START_RANGE + worker_id);
+		string uri = "http://" + smf_amf_ip_addr + ":" + port_id + "/Nsmf_PDUSession/ReleaseSMContext";
+		cout << "Connecting to " << uri << "\n\tPOST Request\n\tPayload: " << jsonPkt << endl;
+		auto req = sess.submit(ec, "POST", uri, jsonPkt);
+
+		req->on_response([&jsonPkt, &uri, &jsonResponsePkt, &sess](const response &res) {
+			//TODO handle respone errors
+			if(res.status_code() != 200) {
+				cout << "Connecting to " << uri << " failed with Status_Code : " << res.status_code() << endl;
+			}
+			res.on_data([&jsonPkt, &jsonResponsePkt, &sess](const uint8_t *data, std::size_t len) {
+				if (len > 0)
+				{
+					const char *s = "";
+					s = reinterpret_cast<const char *>(data);
+					// collecting all the data
+					if(len > 0) {
+						jsonResponsePkt.append(s, len);
+					}
+				}
+			});
+		});
+		req->on_close([&jsonResponsePkt, &uri, &sess](uint32_t error_code) {
+			//shutdown session after first request was done.
+			sess.shutdown();
+		});
+	});
+
+	sess.on_error([](const boost::system::error_code &ec) {
+		std::cerr << "error: " << ec.message() << std::endl;
+	});
+
+	io_service.run();
+
+	TRACE(cout << "amf_handledetach :: Received from SMF : " << jsonResponsePkt << endl;)
 	TRACE(cout << "amf_handledetach:" << " detach response received from smf: " << guti << endl;)
 
-	pkt.extract_gtp_hdr();
-	pkt.extract_item(res);
-	if (res == false) {
-		TRACE(cout << "amf_handledetach:" << " smf detach failure: " << guti << endl;)
-		return;		
+	Json::Value jsonRes;
+	Json::Reader reader;
+
+	std::string pktString;
+	std::istringstream iss;
+	bool parsingSuccessful = reader.parse(jsonResponsePkt, jsonRes);
+
+	// TODO handle respone errors
+	if(parsingSuccessful == false) {
+		TRACE(cout << "ERROR :: amf_handledetach:" << " handle detach failure: JSON parsing failed" << endl;)
+		return;
 	}
+
+	res = false; 		// Default res failed
+	if(jsonRes.isMember("res")) {
+		pktString = jsonRes["res"].asString();
+		iss.str(pktString);
+		iss >> res;
+		iss.clear();
+	}
+
+	if (res == false) {
+		TRACE(cout << "ERROR :: amf_handledetach:" << " detach failure: " << guti << endl;)
+		return;
+	}
+
 	pkt.clear_pkt();
 	pkt.append_item(res);
-	
+
 	if (ENC_ON) {
 		g_crypt.enc(pkt, k_nas_enc);
 	}

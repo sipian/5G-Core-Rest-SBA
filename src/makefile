@@ -20,16 +20,16 @@ diameter.o:	diameter.cpp diameter.h utils.h
 gtp.o:	gtp.cpp gtp.h utils.h
 	$(G++) -c -o gtp.o gtp.cpp
 
-amf.o:	diameter.h gtp.h network.h packet.h s1ap.h sctp_client.h sctp_server.h security.h sync.h telecom.h udp_client.h utils.h amf.cpp amf.h
+amf.o: ports.h diameter.h gtp.h network.h packet.h s1ap.h sctp_client.h sctp_server.h security.h sync.h telecom.h udp_client.h utils.h amf.cpp amf.h
 	$(G++) -c -o amf.o amf.cpp
 
-amf_server.o:	diameter.h gtp.h amf.h amf_server.cpp amf_server.h network.h packet.h s1ap.h sctp_client.h sctp_server.h security.h sync.h telecom.h udp_client.h utils.h
+amf_server.o: ports.h diameter.h gtp.h amf.h amf_server.cpp amf_server.h network.h packet.h s1ap.h sctp_client.h sctp_server.h security.h sync.h telecom.h udp_client.h utils.h
 	$(G++) -c -o amf_server.o amf_server.cpp 
 
 ausf.o:  diameter.h gtp.h ausf.cpp ausf.h mysql.h network.h packet.h s1ap.h sctp_server.h sctp_client.h sync.h utils.h
 	$(G++) -c -o ausf.o ausf.cpp      
 
-ausf_server.o:   diameter.h gtp.h ausf.h ausf_server.cpp ausf_server.h mysql.h network.h packet.h s1ap.h sctp_server.h sctp_client.h sync.h utils.h
+ausf_server.o: ports.h diameter.h gtp.h ausf.h ausf_server.cpp ausf_server.h mysql.h network.h packet.h s1ap.h sctp_server.h sctp_client.h sync.h utils.h
 	$(G++) -c -o ausf_server.o ausf_server.cpp        
 
 
@@ -49,7 +49,7 @@ mme_server.o:	diameter.h gtp.h mme.h mme_server.cpp mme_server.h network.h packe
 smf.o:	diameter.h gtp.h smf.cpp smf.h network.h packet.h s1ap.h sctp_client.h sctp_server.h security.h sync.h telecom.h udp_client.h udp_server.h utils.h
 	$(G++) -c -o smf.o smf.cpp
 
-smf_server.o:	diameter.h gtp.h smf.h smf_server.cpp smf_server.h network.h packet.h s1ap.h sctp_client.h sctp_server.h security.h sync.h telecom.h udp_client.h udp_server.h utils.h
+smf_server.o: ports.h diameter.h gtp.h smf.h smf_server.cpp smf_server.h network.h packet.h s1ap.h sctp_client.h sctp_server.h security.h sync.h telecom.h udp_client.h udp_server.h utils.h
 	$(G++) -c -o smf_server.o smf_server.cpp        
 
 mysql.o:	mysql.cpp mysql.h utils.h
@@ -94,7 +94,7 @@ sgw_server.o:	diameter.h gtp.h network.h packet.h s1ap.h sgw.h sgw_server.cpp sg
 sink.o:	diameter.h gtp.h network.h packet.h s1ap.h sink.cpp sink.h tun.h udp_client.h udp_server.h utils.h
 	$(G++) -c -o sink.o sink.cpp
 
-sink_server.o:	diameter.h gtp.h network.h packet.h s1ap.h sink.h sink_server.cpp sink_server.h tun.h udp_client.h udp_server.h utils.h
+sink_server.o: ports.h diameter.h gtp.h network.h packet.h s1ap.h sink.h sink_server.cpp sink_server.h tun.h udp_client.h udp_server.h utils.h
 	$(G++) -c -o sink_server.o sink_server.cpp	
 
 sync.o:	sync.cpp sync.h utils.h
@@ -117,7 +117,7 @@ utils.o:	utils.cpp utils.h
 upf.o:  diameter.h gtp.h network.h packet.h upf.cpp s1ap.h sync.h udp_client.h udp_server.h utils.h
 	$(G++) -c -o upf.o upf.cpp
 
-upf_server.o:   diameter.h gtp.h network.h packet.h upf_server.cpp upf_server.h upf.h s1ap.h sync.h udp_client.h udp_server.h utils.h
+upf_server.o: ports.h diameter.h gtp.h network.h packet.h upf_server.cpp upf_server.h upf.h s1ap.h sync.h udp_client.h udp_server.h utils.h
 	$(G++) -c -o upf_server.o upf_server.cpp
 
 udm.o: diameter.h gtp.h udm.cpp udm.h mysql.h network.h packet.h s1ap.h sctp_server.h sctp_client.h sync.h utils.h

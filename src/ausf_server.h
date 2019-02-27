@@ -1,6 +1,7 @@
 #ifndef AUSF_SERVER_H
 #define AUSF_SERVER_H
 
+#include "ports.h"
 #include "diameter.h"
 #include "gtp.h"
 #include "ausf.h"

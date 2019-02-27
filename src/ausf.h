@@ -18,9 +18,8 @@ extern int g_ausf_port;
 extern string g_udm_ip_addr;
 extern int g_udm_port;
 
-class RestPacket
+struct RestPacket
 {
-	public:
 	uint64_t imsi;
 	uint64_t plmn_id;
 	uint64_t autn_vector;
