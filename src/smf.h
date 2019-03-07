@@ -100,6 +100,54 @@ public:
 	~UeContext();
 };
 
+/* Request & Respone payloads exchanged between SMF and AMF */
+struct CreateSMContextRequestPacket {
+	uint64_t guti;
+	uint64_t imsi;
+	uint32_t s11_cteid_mme;
+	uint8_t eps_bearer_id;
+	uint64_t apn_in_use;
+	uint64_t tai;
+};
+
+struct CreateSMContextResponsPacket {
+	uint64_t guti;
+	uint8_t eps_bearer_id;
+	uint8_t e_rab_id;
+	uint32_t s1_uteid_ul;
+	uint32_t s11_cteid_sgw;
+	uint64_t k_enodeb;
+	int tai_list_size;
+	vector<uint64_t> tai_list;
+	uint64_t tau_timer;
+	string ue_ip_addr;
+	string upf_s1_ip_addr;
+	int upf_s1_port;
+	bool res;
+};
+
+struct UpdateSMContextRequestPacket {
+	uint64_t guti;
+	uint32_t s1_uteid_dl;
+	uint8_t eps_bearer_id;
+	string g_trafmon_ip_addr;
+	int g_trafmon_port;
+};
+
+struct UpdateSMContextResponsePacket {
+	bool res;
+};
+
+struct ReleaseSMContextRequestPacket {
+	uint64_t guti;
+	uint8_t eps_bearer_id;
+	uint64_t tai;
+};
+
+struct ReleaseSMContextResponsePacket {
+	bool res;
+};
+
 class Smf{
 
 private:
@@ -118,9 +166,9 @@ public:
 	UdpServer amf_server;
 	
 	Smf();
-	void handle_create_session(sockaddr_in, Packet, UdpClient&, SctpClient&);
-	void handle_modify_bearer(sockaddr_in,Packet, UdpClient&, SctpClient&);
-	void handle_detach(sockaddr_in, Packet, UdpClient&, SctpClient&);
+	void handle_create_session(CreateSMContextRequestPacket&, CreateSMContextResponsPacket&, UdpClient&, SctpClient&);
+	void handle_modify_bearer(UpdateSMContextRequestPacket&, UpdateSMContextResponsePacket&, UdpClient&, SctpClient&);
+	void handle_detach(ReleaseSMContextRequestPacket&, ReleaseSMContextResponsePacket&, UdpClient&, SctpClient&);
 	~Smf();
 };
 #endif

@@ -1,6 +1,7 @@
 #ifndef AMF_H
 #define AMF_H
 
+#include "ports.h"
 #include "diameter.h"
 #include "gtp.h"
 #include "network.h"
@@ -136,12 +137,12 @@ public:
 	void handle_security_mode_cmd(int, Packet, SctpClient&);
 	bool handle_security_mode_complete(int, Packet, SctpClient&);
 	void handle_location_update(Packet, SctpClient&, SctpClient&);
-	void handle_create_session(int, Packet, UdpClient&, SctpClient&);
+	void handle_create_session(int, Packet, UdpClient&, SctpClient&, int);
 	void handle_attach_complete(Packet, SctpClient&);
-	void handle_detach(int, Packet, UdpClient&, SctpClient&);
+	void handle_detach(int, Packet, UdpClient&, SctpClient&, int);
 		//handover changes
 	void handle_handover(Packet);
-	void handle_modify_bearer(Packet, UdpClient&, SctpClient&);
+	void handle_modify_bearer(Packet, UdpClient&, SctpClient&, int);
 	void handle_handover_completion(Packet);
 	void setup_indirect_tunnel(Packet pkt);
 	void request_target_RAN( Packet pkt);

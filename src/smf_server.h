@@ -1,6 +1,7 @@
 #ifndef SMF_SERVER_H
 #define SMF_SERVER_H
 
+#include "ports.h"
 #include "diameter.h"
 #include "gtp.h"
 #include "network.h"
@@ -19,6 +20,6 @@ extern Smf g_smf;
 void check_usage(int);
 void init(char**);
 void run();
-void handle_s11_traffic();
+void handle_s11_traffic(int worker_id);
 
 #endif /* SGW_SERVER_H */

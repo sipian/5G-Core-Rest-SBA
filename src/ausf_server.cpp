@@ -36,30 +36,33 @@ void rest_server(int worker_id)
 {
 	boost::system::error_code ec;
   	http2 server;
-	string port = "400" + to_string(worker_id);
-	RestPacket rpkt;
-
-	while(1)
+	string port = to_string(AUSF_AMF_PORT_START_RANGE + worker_id);
+	try
 	{
-		server.handle("/Nausf_UEAuthentication", [&worker_id,&rpkt](const request &req, const response &res) 
+		server.handle("/Nausf_UEAuthentication", [&worker_id](const request &req, const response &res) 
 		{
-			boost::system::error_code ec;
-
-			req.on_data([&worker_id,&rpkt,&res](const uint8_t *data, std::size_t len) 
+			req.on_data([&worker_id,&res](const uint8_t *data, size_t len)
 			{
+				if(len <= 0) {
+					return;
+				}
 
-				if(len <= 0)
-					 return;
-
-				cout<<"AuSF Request is being received"<<endl;
+				TRACE(cout<<"ausfserver_rest_server :: AuSF Request is being received"<<endl;)
 				const char *s = "";
 				s = reinterpret_cast<const char *>(data);
-				std::string str;
+				string str;
 				str.assign(s,len);
-				cout<<"Received Req: "<<str<<endl;
+				TRACE(cout<<"ausfserver_rest_server :: Received Req: "<<str<<endl;)
 				Json::Value root;
 				Json::Reader reader;
 				bool parsingSuccessful = reader.parse(str,root);
+
+				if(parsingSuccessful == false) {
+					res.write_head(400);
+					res.end();
+					cout << "ausfserver_rest_server :: JSON Parsing unsuccessful" << endl;
+					return;
+				}
 				Packet pkt;
 				pkt.clear_pkt();
 		
@@ -72,44 +75,39 @@ void rest_server(int worker_id)
 				uint64_t xres;
 				uint64_t k_asme;
 
-
-				std::string imsi_string = root["imsi"].asString();
-				std::istringstream iss(imsi_string);
+				string imsi_string = root["imsi"].asString();
+				istringstream iss(imsi_string);
 				iss >> imsi;
 
 				iss.clear();
-				std::string plmn_id_string = root["plmn_id"].asString();
+				string plmn_id_string = root["plmn_id"].asString();
 				iss.str(plmn_id_string);
 				iss >> plmn_id;
 		
 				iss.clear();
-				std::string autn_vector_string = root["num_autn_vectors"].asString();
+				string autn_vector_string = root["num_autn_vectors"].asString();
 				iss.str(autn_vector_string);
 				iss >> autn_vector;
 		
 				iss.clear();
-				std::string nw_type_string = root["nw_type"].asString();
+				string nw_type_string = root["nw_type"].asString();
 				iss.str(nw_type_string);
 				iss >> nw_type;
 
-				
+				RestPacket rpkt;
 				rpkt.imsi = imsi;
 				rpkt.plmn_id = plmn_id;
 				rpkt.autn_vector = autn_vector;
 				rpkt.nw_type = nw_type;
 
-				TRACE(cout << "ausfserver_handlemme:" << " case 1: autn info req" << endl;)
+				TRACE(cout << "ausfserver_rest_server :: " << " case 1: autn info req" << endl;)
 				g_ausf.handle_autninfo_req(rpkt, udm_clients[worker_id]);
-				std::cout<<"rpkt.autn_num is (ausf_server.cpp) "<<rpkt.autn_num<<endl;
+				cout<<"ausfserver_rest_server :: rpkt.autn_num is "<<rpkt.autn_num<<endl;
 				autn_num = rpkt.autn_num;
 				rand_num = rpkt.rand_num;
 				xres = rpkt.xres;
 				k_asme = rpkt.k_asme;
-				//make the reply here 
 				Json::Value json_response;
-
-				std:cout<<"autn_num"<<autn_num<<endl;
-
 
 				json_response["autn_num"] = to_string(autn_num);
 				json_response["rand_num"] = to_string(rand_num);
@@ -117,22 +115,24 @@ void rest_server(int worker_id)
 				json_response["k_asme"] = to_string(k_asme);
 				Json::FastWriter fastWriter;
 		
-				std::string jsonMessage = fastWriter.write(json_response);
+				string jsonMessage = fastWriter.write(json_response);
 		
 				res.write_head(200);
 				res.end(jsonMessage);
-				cout<<"Response Sent"<<endl;
-
+				cout<<"ausfserver_rest_server :: Sent Response to AMF :: \n\t" << jsonMessage <<endl;
 			});
 		});
 
-
+		// synchronous call to server.
 		if (server.listen_and_serve(ec,g_ausf_ip_addr, port)) 
 		{
-			std::cerr<<"hjdhfjdhfdjsfhs"<<std::endl;
-			std::cerr << "error: " << ec.message() << std::endl;
+			cerr << "error: " << ec.message() << endl;
 		}
 	// }
+	}
+	catch (exception &e)
+	{
+		cerr << "AUSF server :: exception :: " << e.what() << "\n";
 	}
 }
 
@@ -167,8 +167,6 @@ int handle_mme(int conn_fd, int worker_id) {
 	}		
 	pkt.extract_diameter_hdr();
 	switch (pkt.diameter_hdr.msg_type) {
-		/* Authentication info req */
-
 		/* Location update */
 		case 2:
 			TRACE(cout << "ausfserver_handlemme:" << " case 2: loc update" << endl;)

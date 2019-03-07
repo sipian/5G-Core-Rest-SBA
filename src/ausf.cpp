@@ -22,7 +22,7 @@ void Ausf::handle_mysql_conn() {
 	g_sync.munlock(mysql_client_mux);
 }
 
-void Ausf::handle_autninfo_req( RestPacket &restpkt, SctpClient &udm_client) {
+void Ausf::handle_autninfo_req(RestPacket &requestPkt, SctpClient &udm_client) {
 	uint64_t imsi;
 	uint64_t key;
 	uint64_t rand_num;
@@ -36,18 +36,10 @@ void Ausf::handle_autninfo_req( RestPacket &restpkt, SctpClient &udm_client) {
 	uint64_t plmn_id;
 	uint64_t nw_type;
 
-	// pkt.extract_item(imsi);
-	imsi = restpkt.imsi;
-	// pkt.extract_item(plmn_id);
-	plmn_id = restpkt.plmn_id;
-	// pkt.extract_item(num_autn_vectors);
-	num_autn_vectors = restpkt.autn_vector;
-	// pkt.extract_item(nw_type);
-	nw_type = restpkt.nw_type;
-
-	// cout<<"handle imsi is: "<<imsi<<endl;
-	// cout<<"handle plmn id: "<<plmn_id<<endl;
-	// cout<<"handle nw_type is: "<<nw_type<<endl;
+	imsi = requestPkt.imsi;
+	plmn_id = requestPkt.plmn_id;
+	num_autn_vectors = requestPkt.autn_vector;
+	nw_type = requestPkt.nw_type;
 
 	Packet pkt;
 	pkt.clear_pkt();
@@ -70,17 +62,12 @@ void Ausf::handle_autninfo_req( RestPacket &restpkt, SctpClient &udm_client) {
 	ik = xres + 3;
 	k_asme = ck + ik + sqn + plmn_id;
 	
-	// pkt.clear_pkt();
-	// pkt.append_item(autn_num);
-// pkt.append_item(xres);
-		// pkt.append_item(k_asme);
-	
-	restpkt.autn_num = autn_num;
-	restpkt.rand_num = rand_num;
-	restpkt.xres = xres;
-	restpkt.k_asme = k_asme;
+	requestPkt.autn_num = autn_num;
+	requestPkt.rand_num = rand_num;
+	requestPkt.xres = xres;
+	requestPkt.k_asme = k_asme;
 
-	std::cout<<"restpkt.autn_num is (ausf.cpp) "<<restpkt.autn_num<<endl;
+	std::cout<<"requestPkt.autn_num is (ausf.cpp) "<<requestPkt.autn_num<<endl;
 	// pkt.prepend_diameter_hdr(1, pkt.len);
 	// server.snd(conn_fd, pkt);
 	// TRACE(cout << "ausf_handleautoinforeq:" << " response sent to amf: " << imsi << endl;)
