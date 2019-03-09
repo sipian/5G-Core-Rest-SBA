@@ -101,7 +101,7 @@ void rest_server(int worker_id)
 				rpkt.nw_type = nw_type;
 
 				TRACE(cout << "ausfserver_rest_server :: " << " case 1: autn info req" << endl;)
-				g_ausf.handle_autninfo_req(rpkt, udm_clients[worker_id]);
+				g_ausf.handle_autninfo_req(rpkt, worker_id);
 				cout<<"ausfserver_rest_server :: rpkt.autn_num is "<<rpkt.autn_num<<endl;
 				autn_num = rpkt.autn_num;
 				rand_num = rpkt.rand_num;
@@ -170,7 +170,7 @@ int handle_mme(int conn_fd, int worker_id) {
 		/* Location update */
 		case 2:
 			TRACE(cout << "ausfserver_handlemme:" << " case 2: loc update" << endl;)
-			g_ausf.handle_location_update(conn_fd, pkt, udm_clients[worker_id]);
+			g_ausf.handle_location_update(conn_fd, pkt, worker_id);
 			break;
 
 		/* For error handling */	

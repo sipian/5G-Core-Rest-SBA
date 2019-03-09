@@ -42,8 +42,8 @@ public:
 
 	Ausf();
 	void handle_mysql_conn();
-	void handle_autninfo_req(RestPacket&, SctpClient&);
-	void handle_location_update(int, Packet&, SctpClient&);
+	void handle_autninfo_req(RestPacket&, int);
+	void handle_location_update(int, Packet&, int);
 	~Ausf();
 };
 
