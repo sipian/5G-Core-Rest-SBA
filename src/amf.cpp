@@ -232,25 +232,12 @@ void Amf::handle_initial_attach(int conn_fd, Packet pkt, SctpClient &ausf_client
 	Json::Reader reader;
 
 	bool parsingSuccessful = reader.parse(jsonResponsePkt, jsonRes);
-	std::string autn_string = jsonRes["autn_num"].asString();
-	std::istringstream iss(autn_string);
-	iss >> autn_num;
-	iss.clear();
 
-	std::string rand_string = jsonRes["rand_num"].asString();
-	iss.str(rand_string);
-	iss >> rand_num;
-	iss.clear();
-
-	std::string xres_string = jsonRes["xres"].asString();
-	iss.str(xres_string);
-	iss >> xres;
-	iss.clear();
-
-	std::string kasme_string = jsonRes["k_asme"].asString();
-	iss.str(kasme_string);
-	iss >> k_asme;
-	iss.clear();
+	// TODO: have isMember check?
+	autn_num = jsonRes["autn_num"].asUInt64();
+	rand_num = jsonRes["rand_num"].asUInt64();
+	xres = jsonRes["xres"].asUInt64();
+	k_asme = jsonRes["k_asme"].asUInt64();
 
 	// g_sync.mlock(uectx_mux);
 	// ue_ctx[guti].xres = xres;
@@ -456,7 +443,7 @@ bool Amf::handle_security_mode_complete(int conn_fd, Packet pkt, SctpClient &udm
 
 	if (HMAC_ON) {
 		res = g_integrity.hmac_check(pkt, k_nas_int);
-		if (res == false) {
+		if (!res) {
 			TRACE(cout << "amf_handlesecuritymodecomplete:" << " hmac failure: " << guti << endl;)
 			g_utils.handle_type1_error(-1, "hmac failure: amf_handlesecuritymodecomplete");
 		}		
@@ -465,7 +452,7 @@ bool Amf::handle_security_mode_complete(int conn_fd, Packet pkt, SctpClient &udm
 		g_crypt.dec(pkt, k_nas_enc);
 	}
 	pkt.extract_item(res);
-	if (res == false) {
+	if (!res) {
 		TRACE(cout << "amf_handlesecuritymodecomplete:" << " security mode complete failure: " << guti << endl;)
 		return false;
 	}
@@ -635,62 +622,39 @@ void Amf::handle_create_session(int conn_fd, Packet pkt, UdpClient &smf_client, 
 	Json::Value jsonRes;
 	Json::Reader reader;
 
-	std::string pktString;
-	std::istringstream iss;
 	bool parsingSuccessful = reader.parse(jsonResponsePkt, jsonRes);
 
 	//TODO handle respone errors
-	if(parsingSuccessful == false) {
+	if(!parsingSuccessful) {
 		cout << "amf_createsession: Response received from SMF parsing failed" << endl;
 	}
 
 	if(jsonRes.isMember("guti")) {
-		pktString = jsonRes["guti"].asString();
-		iss.str(pktString);
-		iss >> guti;
-		iss.clear();
+		guti = jsonRes["guti"].asUInt64();
 	}
 
 	if(jsonRes.isMember("eps_bearer_id")) {
-		pktString = jsonRes["eps_bearer_id"].asString();
-		iss.str(pktString);
-		iss >> eps_bearer_id;
-		iss.clear();
+		eps_bearer_id = jsonRes["eps_bearer_id"].asUInt();
 	}
 
 	if(jsonRes.isMember("e_rab_id")) {
-		pktString = jsonRes["e_rab_id"].asString();
-		iss.str(pktString);
-		iss >> e_rab_id;
-		iss.clear();
+		e_rab_id = jsonRes["e_rab_id"].asUInt();
 	}
 
 	if(jsonRes.isMember("s1_uteid_ul")) {
-		pktString = jsonRes["s1_uteid_ul"].asString();
-		iss.str(pktString);
-		iss >> s1_uteid_ul;
-		iss.clear();
+		s1_uteid_ul = jsonRes["s1_uteid_ul"].asUInt();
 	}
 
 	if(jsonRes.isMember("s11_cteid_sgw")) {
-		pktString = jsonRes["s11_cteid_sgw"].asString();
-		iss.str(pktString);
-		iss >> s11_cteid_upf;
-		iss.clear();
+		s11_cteid_upf = jsonRes["s11_cteid_sgw"].asUInt();
 	}
 
 	if(jsonRes.isMember("k_enodeb")) {
-		pktString = jsonRes["k_enodeb"].asString();
-		iss.str(pktString);
-		iss >> k_enodeb;
-		iss.clear();
+		k_enodeb = jsonRes["k_enodeb"].asUInt64();
 	}
 
 	if(jsonRes.isMember("tai_list_size")) {
-		pktString = jsonRes["tai_list_size"].asString();
-		iss.str(pktString);
-		iss >> tai_list_size;
-		iss.clear();
+		tai_list_size = jsonRes["tai_list_size"].asInt();
 	}
 
 	if(jsonRes.isMember("tai_list")) {
@@ -698,19 +662,13 @@ void Amf::handle_create_session(int conn_fd, Packet pkt, UdpClient &smf_client, 
 		Json::Value taiListVals = jsonRes["tai_list"];
 		uint64_t taiListElem;
 		for( Json::ValueIterator itr = taiListVals.begin() ; itr != taiListVals.end() ; itr++ ) {
-			pktString = itr->asString();
-			iss.str(pktString);
-			iss >> taiListElem;
-			iss.clear();
+			taiListElem = itr->asUInt64();
 			tai_list.push_back(taiListElem);
 		}
 	}
 
 	if(jsonRes.isMember("tau_timer")) {
-		pktString = jsonRes["tau_timer"].asString();
-		iss.str(pktString);
-		iss >> tau_timer;
-		iss.clear();
+		tau_timer = jsonRes["tau_timer"].asUInt64();
 	}
 
 	if(jsonRes.isMember("ue_ip_addr")) {
@@ -722,17 +680,11 @@ void Amf::handle_create_session(int conn_fd, Packet pkt, UdpClient &smf_client, 
 	}
 
 	if(jsonRes.isMember("upf_s1_port")) {
-		pktString = jsonRes["upf_s1_port"].asString();
-		iss.str(pktString);
-		iss >> g_upf_s1_port;
-		iss.clear();
+		g_upf_s1_port = jsonRes["upf_s1_port"].asInt();
 	}
 
 	if(jsonRes.isMember("res")) {
-		pktString = jsonRes["res"].asString();
-		iss.str(pktString);
-		iss >> res;
-		iss.clear();
+		res = jsonRes["res"].asBool();
 	}
 
 	TRACE(cout << "amf_createsession:" << " create session IP addr: " << g_upf_s1_ip_addr << ":" << g_upf_s1_port << endl;)
@@ -839,7 +791,7 @@ void Amf::handle_attach_complete(Packet pkt, SctpClient &udm_client) {
 
 	if (HMAC_ON) {
 		res = g_integrity.hmac_check(pkt, k_nas_int);
-		if (res == false) {
+		if (!res) {
 			TRACE(cout << "amf_handleattachcomplete:" << " hmac failure: " << guti << endl;)
 			g_utils.handle_type1_error(-1, "hmac failure: amf_handleattachcomplete");
 		}
@@ -953,24 +905,19 @@ void Amf::handle_modify_bearer(Packet pkt, UdpClient &smf_client, SctpClient &ud
 	Json::Value jsonRes;
 	Json::Reader reader;
 
-	std::string pktString;
-	std::istringstream iss;
 	bool parsingSuccessful = reader.parse(jsonResponsePkt, jsonRes);
 
 	//TODO handle response errors
-	if(parsingSuccessful == false) {
+	if(!parsingSuccessful) {
 		TRACE(cout << "ERROR :: amf_handlemodifybearer:" << " modify bearer failure: JSON parsing failed" << endl;)
 	}
 
 	res = false; 		// Default res failed
 	if(jsonRes.isMember("res")) {
-		pktString = jsonRes["res"].asString();
-		iss.str(pktString);
-		iss >> res;
-		iss.clear();
+		res = jsonRes["res"].asBool();
 	}
 
-	if (res == false) {
+	if (!res) {
 		TRACE(cout << "ERROR :: amf_handlemodifybearer:" << " modify bearer failure: " << guti << endl;)
 	}
 	else {
@@ -1020,7 +967,7 @@ void Amf::setup_indirect_tunnel(Packet pkt) {
 	SctpClient to_source_ran_client;
 	to_source_ran_client.conn(s_ran_ip_addr, s_ran_port);
 
-	if (res == true) {
+	if (res) {
 
 		pkt.clear_pkt();
 		pkt.append_item(s1_uteid_ul);
@@ -1102,7 +1049,7 @@ void Amf::handle_handover_completion(Packet pkt) {
 	SctpClient to_source_ran_client;
 	to_source_ran_client.conn(s_ran_ip_addr.c_str(), s_ran_port);
 
-	if (res == true) {
+	if (res) {
 
 		pkt.clear_pkt();
 		pkt.append_item(res);
@@ -1193,7 +1140,7 @@ void Amf::handle_detach(int conn_fd, Packet pkt, UdpClient &smf_client, SctpClie
 
 	if (HMAC_ON) {
 		res = g_integrity.hmac_check(pkt, k_nas_int);
-		if (res == false)
+		if (!res)
 		{
 			TRACE(cout << "amf_handledetach:"
 					   << " hmac detach failure: " << guti << endl;)
@@ -1263,25 +1210,20 @@ void Amf::handle_detach(int conn_fd, Packet pkt, UdpClient &smf_client, SctpClie
 	Json::Value jsonRes;
 	Json::Reader reader;
 
-	std::string pktString;
-	std::istringstream iss;
 	bool parsingSuccessful = reader.parse(jsonResponsePkt, jsonRes);
 
 	// TODO handle respone errors
-	if(parsingSuccessful == false) {
+	if(!parsingSuccessful) {
 		TRACE(cout << "ERROR :: amf_handledetach:" << " handle detach failure: JSON parsing failed" << endl;)
 		return;
 	}
 
 	res = false; 		// Default res failed
 	if(jsonRes.isMember("res")) {
-		pktString = jsonRes["res"].asString();
-		iss.str(pktString);
-		iss >> res;
-		iss.clear();
+		res = jsonRes["res"].asBool();
 	}
 
-	if (res == false) {
+	if (!res) {
 		TRACE(cout << "ERROR :: amf_handledetach:" << " detach failure: " << guti << endl;)
 		return;
 	}
