@@ -83,7 +83,7 @@ Smf::Smf() {
 	smf_upf_ip_addr = getMyIPAddress();
 	smf_amf_ip_addr = getMyIPAddress();
 	upf_s11_ip_addr = resolve_host("upf");
-	g_udm_ip_addr = serviceDiscover("udm", consulAgent);
+	g_udm_ip_addr = serviceDiscovery("udm", consulAgent);
 }
 
 void Smf::clrstl() {
