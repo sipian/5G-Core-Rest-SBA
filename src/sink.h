@@ -4,6 +4,7 @@
 #include "diameter.h"
 #include "gtp.h"
 #include "network.h"
+#include "ports.h"
 #include "packet.h"
 #include "s1ap.h"
 #include "tun.h"

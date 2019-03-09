@@ -3,16 +3,12 @@
 using namespace std;
 using namespace std::chrono;
 
-// string g_ran_ip_addr = "172.26.0.2";
-// string g_trafmon_ip_addr = "172.26.0.2";
-// string g_amf_ip_addr = "172.26.0.5";
-
 string g_ran_ip_addr = resolve_host("ran");
 string g_trafmon_ip_addr = resolve_host("ran");
 string g_amf_ip_addr = resolve_host("amf");
 
-int g_trafmon_port = 4000;
-int g_amf_port = 5000;
+int g_trafmon_port = G_TRAFMON_PORT;
+int g_amf_port = G_AMF_PORT;
 
 RanContext::RanContext() {
 	emm_state = 0; 

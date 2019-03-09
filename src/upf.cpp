@@ -17,11 +17,11 @@ string g_upf_s1_ip_addr = resolve_host("upf");
 string g_upf_sgi_ip_addr = resolve_host("upf");
 string g_sink_ip_addr = resolve_host("sink");
 
-int g_upf_s11_port = 7000;
-int g_upf_s1_port = 7100;
-int g_upf_sgi_port = 8100;
-int g_sink_port = 8500;
-int smf_s11_port=8000;
+int g_upf_s11_port = UPF_G_UPF_S11_PORT;
+int g_upf_s1_port = G_UPF_S1_PORT;
+int g_upf_sgi_port = G_UPF_SGI_PORT;
+int g_sink_port = G_SINK_PORT;
+int smf_s11_port = SMF_S11_PORT;
 
 UeContext::UeContext() {
 	tai = 0; 
@@ -492,7 +492,7 @@ bool Upf::get_uplink_info(uint64_t imsi, uint32_t &sgi_cteid_ul, string &g_upf_s
 		res = true;
 		sgi_cteid_ul = ue_ctx[imsi].sgi_cteid_ul;
 		g_upf_sgi_ip_addr = "10.0.3.129";
-		g_sink_port = 8500;
+		g_sink_port = G_SINK_PORT;
 	}	
 g_sync.munlock(uectx_mux);
 	return res;

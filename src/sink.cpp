@@ -7,8 +7,8 @@
 string g_upf_ip_addr = resolve_host("upf");
 string g_sink_ip_addr = resolve_host("sink");
 
-int g_upf_port = 8100;
-int g_sink_port = 8500;
+int g_upf_port = G_UPF_PORT;
+int g_sink_port = G_SINK_PORT;
 
 void TrafficMonitor::handle_uplink_udata() {
 	struct sockaddr_in src_sock_addr;

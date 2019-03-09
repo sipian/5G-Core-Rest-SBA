@@ -1,11 +1,13 @@
 #include "udm.h"
 #include "discover.h"
+
 using namespace std;
 using namespace std::chrono;
+using namespace ppconsul;
+using ppconsul::Consul;
 
-// string g_udm_ip_addr = "172.26.0.3";
-string g_udm_ip_addr = resolve_host("udm");
-int g_udm_port = 6001;
+string g_udm_ip_addr = "";
+int g_udm_port = G_UDM_PORT;
 
 UeContext::UeContext() {
 	emm_state = 0;
@@ -56,6 +58,12 @@ UeContext::~UeContext() {
 Udm::Udm(){
 	clrstl();
     g_sync.mux_init(mysql_client_mux);
+
+	Consul consul(CONSUL_ADDR);
+	agent::Agent consulAgent(consul);
+
+	serviceRegister("udm", consulAgent);
+	g_udm_ip_addr = getMyIPAddress();
 }
 
 void Udm::clrstl() {

@@ -6,6 +6,8 @@
 #include "mysql.h"
 #include "network.h"
 #include "packet.h"
+#include "ports.h"
+#include "ppconsul/agent.h"
 #include "s1ap.h"
 #include "sctp_server.h"
 #include "sctp_client.h"
