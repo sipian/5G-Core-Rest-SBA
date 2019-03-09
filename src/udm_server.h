@@ -18,7 +18,7 @@ extern int g_workers_count;
 void check_usage(int);
 void init(char**);
 void run();
-int handle_udm(int, int);
+void handle_udm(int);
 void finish();
 
 #endif

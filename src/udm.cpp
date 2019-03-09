@@ -1,5 +1,6 @@
 #include "udm.h"
 #include "discover.h"
+#include <jsoncpp/json/json.h>
 using namespace std;
 using namespace std::chrono;
 
@@ -68,11 +69,11 @@ void Udm::handle_mysql_conn() {
     g_sync.munlock(mysql_client_mux);
 }
 
-void Udm::get_autn_info(int conn_fd, Packet &pkt) {
+std::string Udm::get_autn_info(Json::Value &jsonPkt) {
     uint64_t imsi;
     uint64_t key;
     uint64_t rand_num;
-    pkt.extract_item(imsi);
+	imsi = jsonPkt["imsi"].asUInt64();
 	MYSQL_RES *query_res;
 	MYSQL_ROW query_res_row;
 	int i;
@@ -109,21 +110,18 @@ void Udm::get_autn_info(int conn_fd, Packet &pkt) {
 	// auto stop = high_resolution_clock::now();
 	// auto duration = duration_cast<microseconds>(stop-start);
 	// TRACE(cout<<"Get autn info Time taken is: "<<duration.count()<<endl;)
-    pkt.clear_pkt();
-    pkt.append_item(key);
-    pkt.append_item(rand_num);
-    pkt.prepend_diameter_hdr(1,pkt.len);
-    server.snd(conn_fd,pkt);
-    TRACE(cout<<"udm_get_autn_info: "<<"response sent to ausf"<<endl;)
+
+    // TRACE(cout<<"udm_get_autn_info: "<<"response sent to ausf"<<endl;)
+	Json::Value resJsonPkt;
+	Json::FastWriter fastWriter;
+	resJsonPkt["key"] = std::to_string(key);
+	resJsonPkt["rand_num"] = std::to_string(rand_num);
+	return fastWriter.write(resJsonPkt);
 }
 
-void Udm::set_loc_info(int conn_fd, Packet &pkt)
-{
-    uint64_t imsi;
-    uint32_t mmei;
-
-    pkt.extract_item(imsi);
-    pkt.extract_item(mmei);
+std::string Udm::set_loc_info(Json::Value &jsonPkt) {
+    uint64_t imsi = jsonPkt["imsi"].asUInt64();
+    uint32_t mmei = jsonPkt["mmei"].asUInt();
 
     MYSQL_RES *query_res;
 	string query;
@@ -145,26 +143,12 @@ void Udm::set_loc_info(int conn_fd, Packet &pkt)
 	cout<<"set loc info time taken is"<<duration.count()<<endl;
 }
 
-void Udm::update_info_amf_initial_attach(int connfd, Packet &pkt)
-{
-	uint64_t imsi;
-	uint64_t tai;
-	uint64_t ksi_asme;
-	uint16_t nw_type;
-	uint16_t nw_capability;
-	uint64_t autn_num;
-	uint64_t rand_num;
-	uint64_t xres;
-	uint64_t k_asme;
-	uint32_t enodeb_s1ap_ue_id;
-	uint32_t mme_s1ap_ue_id;
-	uint64_t guti;
-	uint64_t num_autn_vectors;
+std::string Udm::update_info_amf_initial_attach(Json::Value &jsonPkt) {
+	uint64_t ksi_asme = jsonPkt["ksi_asme"].asUInt64();
+	uint64_t xres = jsonPkt["xres"].asUInt64();
+	uint64_t k_asme = jsonPkt["k_asme"].asUInt64();
+	uint64_t guti = jsonPkt["guti"].asUInt64();
 
-	pkt.extract_item(guti);
-	pkt.extract_item(xres);
-	pkt.extract_item(k_asme);
-	pkt.extract_item(ksi_asme);
 	g_sync.mlock(uectx_mux);
 	ue_ctx[guti].xres = xres;
 	ue_ctx[guti].k_asme = k_asme;
@@ -173,27 +157,13 @@ void Udm::update_info_amf_initial_attach(int connfd, Packet &pkt)
 	TRACE(cout<<"update amf_initial_attach UE CTX complete"<<endl;)
 }
 
-void Udm::update_info_amf_initial_attach_init(int connfd, Packet &pkt)
-{
-	uint64_t imsi;
-	uint64_t tai;
-	uint64_t ksi_asme;
-	uint16_t nw_type;
-	uint16_t nw_capability;
-	uint64_t autn_num;
-	uint64_t rand_num;
-	uint64_t xres;
-	uint64_t k_asme;
-	uint32_t enodeb_s1ap_ue_id;
-	uint32_t mme_s1ap_ue_id;
-	uint64_t guti;
-	uint64_t num_autn_vectors;
-	pkt.extract_item(guti);
-	pkt.extract_item(imsi);
-	pkt.extract_item(enodeb_s1ap_ue_id);
-	pkt.extract_item(mme_s1ap_ue_id);
-	pkt.extract_item(tai);
-	pkt.extract_item(nw_capability);
+std::string Udm::update_info_amf_initial_attach_init(Json::Value &jsonPkt) {
+	uint64_t imsi = jsonPkt["imsi"].asUInt64();
+	uint64_t tai = jsonPkt["imsi"].asUInt64();
+	uint16_t nw_capability = jsonPkt["imsi"].asUInt();
+	uint32_t enodeb_s1ap_ue_id = jsonPkt["imsi"].asUInt();
+	uint32_t mme_s1ap_ue_id = jsonPkt["imsi"].asUInt();
+	uint64_t guti = jsonPkt["imsi"].asUInt64();
 
 	// now will just update the ue_contxt for the guti appended in the packet.
 	g_sync.mlock(uectx_mux);
@@ -207,236 +177,181 @@ void Udm::update_info_amf_initial_attach_init(int connfd, Packet &pkt)
 	TRACE(cout<<"Amf_initial_attach INIT ue contxt updated: "<<endl;)
 }
 
-void Udm::handle_autn_ue_ctx_request(int connfd, Packet &pkt)
-{
-	uint64_t guti;
+std::string Udm::handle_autn_ue_ctx_request(Json::Value &jsonPkt) {
+	uint64_t guti = jsonPkt["guti"].asUInt64();
 	uint64_t xres;
-	pkt.extract_item(guti);
 	g_sync.mlock(uectx_mux);
 	xres = ue_ctx[guti].xres;
 	g_sync.munlock(uectx_mux);
-	pkt.clear_pkt();
-	pkt.append_item(xres);
-	server.snd(connfd,pkt);
-	TRACE(cout<<"sent the handle autn request to the amf"<<endl;)
+
+	// TRACE(cout<<"sent the handle autn request to the amf"<<endl;)
+	Json::Value resJsonPkt;
+	Json::FastWriter fastWriter;
+	resJsonPkt["xres"] = std::to_string(xres);
+	return fastWriter.write(resJsonPkt);
 }
 
-void Udm::ue_ctx_request_security_mode_cmd(int connfd, Packet &pkt)
-{
-	uint64_t guti;
-	uint64_t ksi_asme;
-	uint16_t nw_capability;
-	uint64_t nas_enc_algo;
-	uint64_t nas_int_algo;
-	uint64_t k_nas_enc;
-	uint64_t k_nas_int;
+std::string Udm::ue_ctx_request_security_mode_cmd(Json::Value &jsonPkt) {
+	uint64_t guti = jsonPkt["guti"].asUInt64();
 
-	pkt.extract_item(guti);
-	pkt.clear_pkt();
+	Json::Value resJsonPkt;
+	Json::FastWriter fastWriter;
 	g_sync.mlock(uectx_mux);
-	pkt.append_item(ue_ctx[guti].ksi_asme);
-	pkt.append_item(ue_ctx[guti].nw_capability);
-	pkt.append_item(ue_ctx[guti].nas_enc_algo);
-	pkt.append_item(ue_ctx[guti].nas_int_algo);
-	pkt.append_item(ue_ctx[guti].k_nas_enc);
-	pkt.append_item(ue_ctx[guti].k_nas_int);
-	g_sync.munlock(uectx_mux);
-	server.snd(connfd,pkt);
-	TRACE(cout<<"UE CTX information sent to the amf"<<endl;)
 
+	resJsonPkt["ksi_asme"] = std::to_string(ue_ctx[guti].ksi_asme);
+	resJsonPkt["nw_capability"] = std::to_string(ue_ctx[guti].nw_capability);
+	resJsonPkt["nas_enc_algo"] = std::to_string(ue_ctx[guti].nas_enc_algo);
+	resJsonPkt["nas_int_algo"] = std::to_string(ue_ctx[guti].nas_int_algo);
+	resJsonPkt["k_nas_enc"] = std::to_string(ue_ctx[guti].k_nas_enc);
+	resJsonPkt["k_nas_int"] = std::to_string(ue_ctx[guti].k_nas_int);
+
+	g_sync.munlock(uectx_mux);
+
+	// TRACE(cout<<"UE CTX information sent to the amf"<<endl;)
+	return fastWriter.write(resJsonPkt);
 }
 
-void Udm::ue_ctx_request_set_crypt_context(int connfd, Packet &pkt)
-{
+std::string Udm::ue_ctx_request_set_crypt_context(Json::Value &jsonPkt) {
+	uint64_t guti = jsonPkt["guti"].asUInt64();
 
-	uint64_t imsi;
-	uint64_t tai;
-	uint64_t ksi_asme;
-	uint16_t nw_type;
-	uint16_t nw_capability;
-	uint64_t autn_num;
-	uint64_t rand_num;
-	uint64_t xres;
-	uint64_t k_asme;
-	uint32_t enodeb_s1ap_ue_id;
-	uint32_t mme_s1ap_ue_id;
-	uint64_t num_autn_vectors;
-	uint64_t guti;
-	uint64_t nas_enc_algo;
-	uint64_t nas_int_algo;
-	uint64_t k_nas_enc;
-	uint64_t k_nas_int;
-	uint64_t count;
-	uint64_t bearer;
-	uint64_t dir;
-
-	pkt.extract_item(guti);
 	g_sync.mlock(uectx_mux);
 	ue_ctx[guti].nas_enc_algo = 1;
 	ue_ctx[guti].k_nas_enc = ue_ctx[guti].k_asme + ue_ctx[guti].nas_enc_algo + ue_ctx[guti].count + ue_ctx[guti].bearer + ue_ctx[guti].dir;
 	g_sync.munlock(uectx_mux);
+	
 	TRACE(cout<<"ue ctx set crypt updation done"<<endl;)
-
 }
 
-void Udm::ue_ctx_update_set_integrity_context(int connfd, Packet &pkt)
-{
-	uint64_t guti;
-	pkt.extract_item(guti);
+std::string Udm::ue_ctx_update_set_integrity_context(Json::Value &jsonPkt) {
+	uint64_t guti = jsonPkt["guti"].asUInt64();
+
 	g_sync.mlock(uectx_mux);
 	ue_ctx[guti].nas_int_algo = 1;
 	ue_ctx[guti].k_nas_int = ue_ctx[guti].k_asme + ue_ctx[guti].nas_int_algo + ue_ctx[guti].count + ue_ctx[guti].bearer + ue_ctx[guti].dir;
 	g_sync.munlock(uectx_mux);
+
 	TRACE(cout<<"ue ctx updated for set integrity context"<<endl;)
 }
 
-void Udm::ue_ctx_request_handle_security_mode_complete(int connfd, Packet &pkt)
-{
-	uint64_t guti;
+std::string Udm::ue_ctx_request_handle_security_mode_complete(Json::Value &jsonPkt) {
+	uint64_t guti = jsonPkt["guti"].asUInt64();
+
 	uint64_t k_nas_enc;
 	uint64_t k_nas_int;
-	pkt.extract_item(guti);
+
 	g_sync.mlock(uectx_mux);
 	k_nas_enc = ue_ctx[guti].k_nas_enc;
 	k_nas_int = ue_ctx[guti].k_nas_int;
 	g_sync.munlock(uectx_mux);
-	pkt.clear_pkt();
-	pkt.append_item(k_nas_enc);
-	pkt.append_item(k_nas_int);
-	server.snd(connfd, pkt);
-	TRACE(cout<<"Packet sent to amf for handle_security_complete"<<endl;)
+	
+	Json::Value resJsonPkt;
+	Json::FastWriter fastWriter;
+	resJsonPkt["k_nas_enc"] = std::to_string(k_nas_enc);
+	resJsonPkt["k_nas_int"] = std::to_string(k_nas_int);
+	return fastWriter.write(resJsonPkt);
+	// TRACE(cout<<"Packet sent to amf for handle_security_complete"<<endl;)
 }
 
-void Udm::ue_ctx_request_handle_location_update(int connfd, Packet &pkt)
-{
+std::string Udm::ue_ctx_request_handle_location_update(Json::Value &jsonPkt) {
+	uint64_t guti = jsonPkt["guti"].asUInt64();
+
 	uint64_t imsi;
-	uint64_t guti;
-	pkt.extract_item(guti);
+
 	g_sync.mlock(uectx_mux);
 	imsi = ue_ctx[guti].imsi;
 	g_sync.munlock(uectx_mux);
-	pkt.clear_pkt();
-	pkt.append_item(imsi);
-	server.snd(connfd,pkt);
+
+	Json::Value resJsonPkt;
+	Json::FastWriter fastWriter;
+	resJsonPkt["imsi"] = std::to_string(imsi);
+	return fastWriter.write(resJsonPkt);
 }
 
-void Udm::ue_ctx_request_handle_create_session(int connfd, Packet &pkt)
-{
-	vector<uint64_t> tai_list;
-	uint64_t guti;
-	uint64_t imsi;
-	uint64_t apn_in_use;
-	uint64_t tai;
-	uint64_t k_enodeb;
-	uint64_t k_nas_enc;
-	uint64_t k_nas_int;
-	uint64_t tau_timer;
-	uint32_t s11_cteid_amf;
-	uint32_t s11_cteid_upf;
-	uint32_t s1_uteid_ul;
-	uint16_t nw_capability;
-	uint8_t eps_bearer_id;
-	uint8_t e_rab_id;
-	string upf_smf_ip_addr;
-	int upf_smf_port;
-	string ue_ip_addr;
-	int tai_list_size;
-	bool res;
+std::string Udm::ue_ctx_request_handle_create_session(Json::Value &jsonPkt) {
+	uint64_t guti = jsonPkt["guti"].asUInt64();
+	uint32_t s11_cteid_amf = jsonPkt["guti"].asUInt();
+	uint8_t eps_bearer_id = jsonPkt["guti"].asUInt();
 
-	pkt.extract_item(guti);
-	pkt.extract_item(s11_cteid_amf);
-	pkt.extract_item(eps_bearer_id);
+	Json::Value resJsonPkt;
+	Json::FastWriter fastWriter;
 	g_sync.mlock(uectx_mux);
 	ue_ctx[guti].s11_cteid_amf = s11_cteid_amf;
 	ue_ctx[guti].eps_bearer_id = eps_bearer_id;
-	pkt.clear_pkt();
-	pkt.append_item(ue_ctx[guti].s11_cteid_amf);
-	pkt.append_item(ue_ctx[guti].imsi);
-	pkt.append_item(ue_ctx[guti].eps_bearer_id);
-	pkt.append_item(ue_ctx[guti].upf_smf_ip_addr);
-	pkt.append_item(ue_ctx[guti].upf_smf_port);
-	pkt.append_item(ue_ctx[guti].apn_in_use);
-	pkt.append_item(ue_ctx[guti].tai);
+
+	resJsonPkt["s11_cteid_amf"] = std::to_string(ue_ctx[guti].s11_cteid_amf);
+	resJsonPkt["imsi"] = std::to_string(ue_ctx[guti].imsi);
+	resJsonPkt["eps_bearer_id"] = std::to_string(ue_ctx[guti].eps_bearer_id);
+	resJsonPkt["upf_smf_ip_addr"] = ue_ctx[guti].upf_smf_ip_addr;
+	resJsonPkt["upf_smf_port"] = std::to_string(ue_ctx[guti].upf_smf_port);
+	resJsonPkt["apn_in_use"] = std::to_string(ue_ctx[guti].apn_in_use);
+	resJsonPkt["tai"] = std::to_string(ue_ctx[guti].tai);
+
 	g_sync.munlock(uectx_mux);
-	server.snd(connfd,pkt);
-	TRACE(cout<<"UE CTX for handle create session sent"<<endl;)
+	
+	return fastWriter.write(resJsonPkt);
+	// TRACE(cout<<"UE CTX for handle create session sent"<<endl;)
 }
 
-void Udm::ue_ctx_update_handle_craete_session(int connfd, Packet &pkt)
-{
-	vector<uint64_t> tai_list;
-	uint64_t guti;
-	uint64_t imsi;
-	uint64_t apn_in_use;
-	uint64_t tai;
-	uint64_t k_enodeb;
-	uint64_t k_nas_enc;
-	uint64_t k_nas_int;
-	uint64_t tau_timer;
-	uint32_t s11_cteid_amf;
-	uint32_t s11_cteid_upf;
-	uint32_t s1_uteid_ul;
-	uint16_t nw_capability;
-	uint8_t eps_bearer_id;
-	uint8_t e_rab_id;
-	string upf_smf_ip_addr;
-	int upf_smf_port;
-	string ue_ip_addr;
-	int tai_list_size;
-	bool res;
-
-	pkt.extract_item(guti);
+std::string Udm::ue_ctx_update_handle_craete_session(Json::Value &jsonPkt) {
+	uint64_t guti = jsonPkt["guti"].asUInt64();
+	
 	g_sync.mlock(uectx_mux);
-	pkt.extract_item(ue_ctx[guti].ip_addr);
-	pkt.extract_item(ue_ctx[guti].s11_cteid_upf);
-	pkt.extract_item(ue_ctx[guti].s1_uteid_ul);
+	ue_ctx[guti].ip_addr = jsonPkt["ip_addr"].asString();
+	ue_ctx[guti].s11_cteid_upf = jsonPkt["s11_cteid_upf"].asUInt();
+	ue_ctx[guti].s1_uteid_ul = jsonPkt["s1_uteid_ul"].asUInt();
+
 	ue_ctx[guti].tai_list.clear();
 	ue_ctx[guti].tai_list.push_back(ue_ctx[guti].tai);
-	pkt.extract_item(ue_ctx[guti].tau_timer);
+
+	ue_ctx[guti].tau_timer = jsonPkt["s11_cteid_upf"].asUInt64();
 	ue_ctx[guti].e_rab_id = ue_ctx[guti].eps_bearer_id;
 	ue_ctx[guti].k_enodeb = ue_ctx[guti].k_asme;
 	g_sync.munlock(uectx_mux);
-	tai_list_size = 1;
-	pkt.clear_pkt();
-	pkt.append_item(ue_ctx[guti].e_rab_id);
-	pkt.append_item(ue_ctx[guti].k_enodeb);
-	pkt.append_item(ue_ctx[guti].nw_capability);
-	pkt.append_item(tai_list_size);
-	pkt.append_item(ue_ctx[guti].tai_list);
-	pkt.extract_item(ue_ctx[guti].tau_timer);
-	pkt.extract_item(ue_ctx[guti].k_nas_enc);
-	pkt.extract_item(ue_ctx[guti].k_nas_int);
-	server.snd(connfd,pkt);
+	
+	Json::Value resJsonPkt;
+	Json::FastWriter fastWriter;
 
-	TRACE(cout<<"UE CTX update handle create session has sent to AMF"<<endl;)
+	resJsonPkt["e_rab_id"] = std::to_string(ue_ctx[guti].e_rab_id);
+	resJsonPkt["k_enodeb"] = std::to_string(ue_ctx[guti].k_enodeb);
+	resJsonPkt["nw_capability"] = std::to_string(ue_ctx[guti].nw_capability);
+
+	resJsonPkt["tai_list"] = Json::arrayValue;
+	resJsonPkt["tai_list"].append(std::to_string(ue_ctx[guti].tai_list[0]));
+	
+	resJsonPkt["tau_timer"] = std::to_string(ue_ctx[guti].tau_timer);
+	resJsonPkt["k_nas_enc"] = std::to_string(ue_ctx[guti].k_nas_enc);
+	resJsonPkt["k_nas_int"] = std::to_string(ue_ctx[guti].k_nas_int);
+
+	return fastWriter.write(resJsonPkt);
+	// TRACE(cout<<"UE CTX update handle create session has sent to AMF"<<endl;)
 }
 
-void Udm::ue_ctx_request_handle_attach_complete(int connfd, Packet &pkt)
-{
-	uint64_t guti;
+std::string Udm::ue_ctx_request_handle_attach_complete(Json::Value &jsonPkt) {
+	uint64_t guti = jsonPkt["guti"].asUInt64();
+
 	uint64_t k_nas_enc;
 	uint64_t k_nas_int;
 	uint32_t s1_uteid_dl;
 	uint8_t eps_bearer_id;
-	pkt.extract_item(guti);
-	pkt.clear_pkt();
+
+	Json::Value resJsonPkt;
+	Json::FastWriter fastWriter;
+
 	g_sync.mlock(uectx_mux);
-	pkt.append_item(ue_ctx[guti].k_nas_enc);
-	pkt.append_item(ue_ctx[guti].k_nas_int);
+
+	resJsonPkt["k_nas_enc"] = std::to_string(ue_ctx[guti].k_nas_enc);
+	resJsonPkt["k_nas_int"] = std::to_string(ue_ctx[guti].k_nas_int);
+
 	g_sync.munlock(uectx_mux);
-	server.snd(connfd,pkt);
-	TRACE(cout<<"UE CTX for handle attach complete send to amf"<<endl;)
+
+	return fastWriter.write(resJsonPkt);
+	// TRACE(cout<<"UE CTX for handle attach complete send to amf"<<endl;)
 }
 
-void Udm::ue_ctx_update_handle_attach_complete(int connfd, Packet &pkt)
-{
-	uint64_t guti;
-	uint64_t k_nas_enc;
-	uint64_t k_nas_int;
-	uint32_t s1_uteid_dl;
-	uint8_t eps_bearer_id;
-	pkt.extract_item(guti);
-	pkt.extract_item(s1_uteid_dl);
+std::string Udm::ue_ctx_update_handle_attach_complete(Json::Value &jsonPkt) {
+	uint64_t guti = jsonPkt["guti"].asUInt64();
+	uint32_t s1_uteid_dl = jsonPkt["s1_uteid_dl"].asUInt();
+
 	g_sync.mlock(uectx_mux);
 	ue_ctx[guti].s1_uteid_dl = s1_uteid_dl;
 	ue_ctx[guti].emm_state = 1;
@@ -444,112 +359,137 @@ void Udm::ue_ctx_update_handle_attach_complete(int connfd, Packet &pkt)
 	TRACE(cout<<"UE CTX UPADTE from amf handle attach complete"<<endl;)
 }
 
-void Udm::ue_ctx_request_handle_modify_bearer(int connfd, Packet &pkt)
-{
-	uint64_t guti;
-	pkt.extract_item(guti);
-	pkt.clear_pkt();
+std::string Udm::ue_ctx_request_handle_modify_bearer(Json::Value &jsonPkt) {
+	uint64_t guti = jsonPkt["guti"].asUInt64();
+
+	Json::Value resJsonPkt;
+	Json::FastWriter fastWriter;
+
 	g_sync.mlock(uectx_mux);
+
 	ue_ctx[guti].ecm_state = 1;
-	pkt.append_item(ue_ctx[guti].eps_bearer_id);
-	pkt.append_item(ue_ctx[guti].s1_uteid_dl);
-	pkt.append_item(ue_ctx[guti].s11_cteid_upf);
+	resJsonPkt["eps_bearer_id"] = std::to_string(ue_ctx[guti].eps_bearer_id);
+	resJsonPkt["s1_uteid_dl"] = std::to_string(ue_ctx[guti].s1_uteid_dl);
+	resJsonPkt["s11_cteid_upf"] = std::to_string(ue_ctx[guti].s11_cteid_upf);
+
 	g_sync.munlock(uectx_mux);
-	server.snd(connfd, pkt);
-	TRACE(cout<<"UE CTX Request from handle modify bearer complete"<<endl;)
+
+	return fastWriter.write(resJsonPkt);
+	// TRACE(cout<<"UE CTX Request from handle modify bearer complete"<<endl;)
 }
 
-void Udm::ue_ctx_request_handle_detach(int connfd, Packet &pkt)
-{
-	uint64_t guti;
-	pkt.extract_item(guti);
-	pkt.clear_pkt();
+std::string Udm::ue_ctx_request_handle_detach(Json::Value &jsonPkt) {
+	uint64_t guti = jsonPkt["guti"].asUInt64();
+
+	Json::Value resJsonPkt;
+	Json::FastWriter fastWriter;
+
 	g_sync.mlock(uectx_mux);
-	pkt.append_item(ue_ctx[guti].k_nas_enc);
-	pkt.append_item(ue_ctx[guti].k_nas_int);
-	pkt.append_item(ue_ctx[guti].eps_bearer_id);
-	pkt.append_item(ue_ctx[guti].tai);
-	pkt.append_item(ue_ctx[guti].s11_cteid_upf);
+
+	resJsonPkt["k_nas_enc"] = std::to_string(ue_ctx[guti].k_nas_enc);
+	resJsonPkt["k_nas_int"] = std::to_string(ue_ctx[guti].k_nas_int);
+	resJsonPkt["eps_bearer_id"] = std::to_string(ue_ctx[guti].eps_bearer_id);
+	resJsonPkt["tai"] = std::to_string(ue_ctx[guti].tai);
+	resJsonPkt["s11_cteid_upf"] = std::to_string(ue_ctx[guti].s11_cteid_upf);
+	
 	g_sync.munlock(uectx_mux);
-	server.snd(connfd,pkt);
-	TRACE(cout<<"UE CTX Request from amf handle detach"<<endl;)
+
+	return fastWriter.write(resJsonPkt);
+	// TRACE(cout<<"UE CTX Request from amf handle detach"<<endl;)
 }
 
-void Udm::ue_ctx_update_set_upf_info(int connfd, Packet &pkt)
-{
-	uint64_t guti;
-	pkt.extract_item(guti);
+std::string Udm::ue_ctx_update_set_upf_info(Json::Value &jsonPkt) {
+	uint64_t guti = jsonPkt["guti"].asUInt64();
+
 	g_sync.mlock(uectx_mux);
-	pkt.extract_item(ue_ctx[guti].upf_smf_port);
-	pkt.extract_item(ue_ctx[guti].upf_smf_ip_addr);
+	ue_ctx[guti].upf_smf_port = jsonPkt["upf_smf_port"].asInt();
+	ue_ctx[guti].upf_smf_ip_addr = jsonPkt["upf_smf_ip_addr"].asString();
 	g_sync.munlock(uectx_mux);
 }
 
-void Udm::ue_ctx_request_smf_handle_create_session(int connfd, Packet &pkt)
-{
-	uint64_t guti;
-	pkt.extract_item(guti);
-	g_sync.mlock(uectx_mux);
-	pkt.extract_item(ue_ctx[guti].s11_cteid_mme);
-	pkt.extract_item(ue_ctx[guti].eps_bearer_id);
-	pkt.extract_item(ue_ctx[guti].imsi);
-	pkt.extract_item(ue_ctx[guti].apn_in_use);
-	pkt.extract_item(ue_ctx[guti].tai);
+std::string Udm::ue_ctx_request_smf_handle_create_session(Json::Value &jsonPkt) {
+	uint64_t guti = jsonPkt["guti"].asUInt64();
 
-	pkt.clear_pkt();
-	pkt.append_item(ue_ctx[guti].s11_cteid_mme);
-	pkt.append_item(ue_ctx[guti].eps_bearer_id);
-	pkt.append_item(ue_ctx[guti].imsi);
-	pkt.append_item(ue_ctx[guti].apn_in_use);
-	pkt.append_item(ue_ctx[guti].tai);
+	Json::Value resJsonPkt;
+	Json::FastWriter fastWriter;
+
+	g_sync.mlock(uectx_mux);
+
+	ue_ctx[guti].s11_cteid_mme = jsonPkt["s11_cteid_mme"].asUInt();
+	ue_ctx[guti].eps_bearer_id = jsonPkt["eps_bearer_id"].asUInt();
+	ue_ctx[guti].imsi = jsonPkt["imsi"].asUInt64();
+	ue_ctx[guti].apn_in_use = jsonPkt["apn_in_use"].asUInt64();
+	ue_ctx[guti].tai = jsonPkt["tai"].asUInt64();
+
+	resJsonPkt["s11_cteid_mme"] = std::to_string(ue_ctx[guti].s11_cteid_mme);
+	resJsonPkt["eps_bearer_id"] = std::to_string(ue_ctx[guti].eps_bearer_id);
+	resJsonPkt["imsi"] = std::to_string(ue_ctx[guti].imsi);
+	resJsonPkt["apn_in_use"] = std::to_string(ue_ctx[guti].apn_in_use);
+	resJsonPkt["tai"] = std::to_string(ue_ctx[guti].tai);
+
 	g_sync.munlock(uectx_mux);
-	server.snd(connfd, pkt);
-	TRACE(cout<<"Response sent to request from smf handle create session"<<endl;)
+	
+	return fastWriter.write(resJsonPkt);
+	// TRACE(cout<<"Response sent to request from smf handle create session"<<endl;)
 }
 
-void Udm::ue_ctx_update_smf_handle_create_session(int connfd, Packet &pkt)
-{
-	uint64_t guti;
-	pkt.extract_item(guti);
+std::string Udm::ue_ctx_update_smf_handle_create_session(Json::Value &jsonPkt) {
+	uint64_t guti = jsonPkt["guti"].asUInt64();
+
+	Json::Value resJsonPkt;
+	Json::FastWriter fastWriter;
+
 	g_sync.mlock(uectx_mux);
-	pkt.extract_item(ue_ctx[guti].ip_addr);
-	pkt.extract_item(ue_ctx[guti].s11_cteid_sgw);
-	pkt.extract_item(ue_ctx[guti].s1_uteid_ul);
+
+	ue_ctx[guti].ip_addr = jsonPkt["ip_addr"].asString();
+	ue_ctx[guti].s11_cteid_sgw = jsonPkt["s11_cteid_sgw"].asUInt();
+	ue_ctx[guti].s1_uteid_ul = jsonPkt["s1_uteid_ul"].asUInt();
+
 	ue_ctx[guti].tai_list.clear();
 	ue_ctx[guti].tai_list.push_back(ue_ctx[guti].tai);
-	pkt.extract_item(ue_ctx[guti].tau_timer);
+	ue_ctx[guti].tau_timer = jsonPkt["tau_timer"].asUInt64();
 	ue_ctx[guti].e_rab_id = ue_ctx[guti].eps_bearer_id;
 
-	pkt.clear_pkt();
-	pkt.append_item(ue_ctx[guti].e_rab_id);
-	pkt.append_item(ue_ctx[guti].k_enodeb);
-	pkt.append_item(ue_ctx[guti].tai_list);
-	pkt.append_item(ue_ctx[guti].tau_timer);
+	resJsonPkt["e_rab_id"] = std::to_string(ue_ctx[guti].e_rab_id);
+	resJsonPkt["k_enodeb"] = std::to_string(ue_ctx[guti].k_enodeb);
+
+	resJsonPkt["tai_list"] = Json::arrayValue;
+	for(auto val: ue_ctx[guti].tai_list) {
+		resJsonPkt["tai_list"].append(std::to_string(val));
+	}
+
+	resJsonPkt["tau_timer"] = std::to_string(ue_ctx[guti].tau_timer);
+
 	g_sync.munlock(uectx_mux);
-	server.snd(connfd, pkt);
-	TRACE(cout<<"Response sent to update smf handle create session"<<endl;)
+
+	return fastWriter.write(resJsonPkt);
+	// TRACE(cout<<"Response sent to update smf handle create session"<<endl;)
 }
 
-void Udm::ue_ctx_request_smf_handle_modify_bearer(int connfd, Packet &pkt)
-{
-	uint64_t guti;
-	pkt.extract_item(guti);
-	pkt.clear_pkt();
-	pkt.append_item(ue_ctx[guti].eps_bearer_id);
-	pkt.append_item(ue_ctx[guti].s1_uteid_dl);
-	pkt.append_item(ue_ctx[guti].s11_cteid_sgw);
-	server.snd(connfd, pkt);
-	TRACE(cout<<"Response sent to request smf handle modify bearer"<<endl;)
+std::string Udm::ue_ctx_request_smf_handle_modify_bearer(Json::Value &jsonPkt) {
+	uint64_t guti = jsonPkt["guti"].asUInt64();
+
+	Json::Value resJsonPkt;
+	Json::FastWriter fastWriter;
+
+	resJsonPkt["eps_bearer_id"] = std::to_string(ue_ctx[guti].eps_bearer_id);
+	resJsonPkt["s1_uteid_dl"] = std::to_string(ue_ctx[guti].s1_uteid_dl);
+	resJsonPkt["s11_cteid_sgw"] = std::to_string(ue_ctx[guti].s11_cteid_sgw);
+
+	return fastWriter.write(resJsonPkt);
+	// TRACE(cout<<"Response sent to request smf handle modify bearer"<<endl;)
 }
 
-void Udm::ue_ctx_request_smf_handle_detach(int connfd, Packet &pkt)
-{
-	uint64_t guti;
-	pkt.extract_item(guti);
-	pkt.clear_pkt();
-	pkt.append_item(ue_ctx[guti].s11_cteid_sgw);
-	server.snd(connfd, pkt);
-	TRACE(cout<<"Response sent to request from handle detach"<<endl;)
+std::string Udm::ue_ctx_request_smf_handle_detach(Json::Value &jsonPkt) {
+	uint64_t guti = jsonPkt["guti"].asUInt64();
+
+	Json::Value resJsonPkt;
+	Json::FastWriter fastWriter;
+
+	resJsonPkt["s11_cteid_sgw"] = std::to_string(ue_ctx[guti].s11_cteid_sgw);
+
+	return fastWriter.write(resJsonPkt);
+	// TRACE(cout<<"Response sent to request from handle detach"<<endl;)
 }
 
 

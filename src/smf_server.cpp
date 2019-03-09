@@ -183,7 +183,6 @@ void releaseSMContextResponsePayload(ReleaseSMContextResponsePacket &responsePkt
 void handle_s11_traffic(int worker_id) {
 	UdpClient upf_client;
 	SctpClient udm_client;
-	Packet pkt;
 
 	string smf_ausf_port = to_string(SMF_AMF_PORT_START_RANGE + worker_id);
 	upf_client.set_client(smf_upf_ip_addr);
@@ -304,7 +303,7 @@ void handle_s11_traffic(int worker_id) {
 			});
 
 			boost::system::error_code ec;
-			if (server.listen_and_serve(ec,smf_amf_ip_addr, smf_ausf_port))
+			if (server.listen_and_serve(ec, smf_amf_ip_addr, smf_ausf_port))
 			{
 				cerr << "error: " << ec.message() << endl;
 			}
