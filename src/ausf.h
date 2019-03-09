@@ -6,6 +6,8 @@
 #include "mysql.h"
 #include "network.h"
 #include "packet.h"
+#include "ports.h"
+#include "ppconsul/agent.h"
 #include "s1ap.h"
 #include "sctp_client.h"
 #include "sctp_server.h"
@@ -35,7 +37,7 @@ struct RestPacket
 class Ausf {
 private:
 	pthread_mutex_t mysql_client_mux;
-	
+
 public:
 	SctpServer server;
 	MySql mysql_client;

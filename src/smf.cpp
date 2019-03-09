@@ -1,29 +1,24 @@
 #include "smf.h"
 #include "discover.h"
 
-// string g_trafmon_ip_addr = "172.26.0.2";
-// string g_upf_smf_ip_addr = "172.26.0.7";
-// string upf_s1_ip_addr = "172.26.0.7";
-// string smf_upf_ip_addr = "172.26.0.6";//smf-upf
-// string smf_amf_ip_addr = "172.26.0.6";//smf-amf
-// string upf_s11_ip_addr="172.26.0.7";
-// string g_udm_ip_addr="172.26.0.3";
+using namespace ppconsul;
+using ppconsul::Consul;
 
-string g_trafmon_ip_addr = resolve_host("ran");
-string g_upf_smf_ip_addr = resolve_host("upf");
-string upf_s1_ip_addr = resolve_host("upf");
-string smf_upf_ip_addr = resolve_host("smf");
-string smf_amf_ip_addr = resolve_host("smf");
-string upf_s11_ip_addr = resolve_host("upf");
-string g_udm_ip_addr = resolve_host("udm");
+string g_trafmon_ip_addr = "";
+string g_upf_smf_ip_addr = "";
+string upf_s1_ip_addr = "";
+string smf_upf_ip_addr = "";
+string smf_amf_ip_addr = "";
+string upf_s11_ip_addr = "";
+string g_udm_ip_addr = "";
 
-int g_trafmon_port = 4000;
-int g_upf_smf_port = 7000;
-int upf_s1_port = 7100;
-int upf_s11_port=7300;
-int smf_upf_port = 7200;//smf-upf
-int smf_amf_port = 8500;//smf-amf
-int g_udm_port = 6001;
+int g_trafmon_port = G_TRAFMON_PORT;
+int g_upf_smf_port = SMF_G_UPF_SMF_PORT;
+int upf_s1_port = G_UPF_S1_PORT;
+int upf_s11_port = SMF_UPF_S11_PORT;
+int smf_upf_port = SMF_UPF_PORT;//smf-upf
+int smf_amf_port = SMF_AMF_PORT;//smf-amf
+int g_udm_port = G_UDM_PORT;
 
 uint64_t g_timer = 100;
 uint64_t guti=0;
@@ -76,6 +71,19 @@ UeContext::~UeContext()
 Smf::Smf() {
 	clrstl();
 	g_sync.mux_init(uectx_mux);
+
+	Consul consul(CONSUL_ADDR);
+	agent::Agent consulAgent(consul);
+
+	serviceRegister("smf", consulAgent);
+
+	g_trafmon_ip_addr = resolve_host("ran");
+	g_upf_smf_ip_addr = resolve_host("upf");
+	upf_s1_ip_addr = resolve_host("upf");
+	smf_upf_ip_addr = getMyIPAddress();
+	smf_amf_ip_addr = getMyIPAddress();
+	upf_s11_ip_addr = resolve_host("upf");
+	g_udm_ip_addr = serviceDiscover("udm", consulAgent);
 }
 
 void Smf::clrstl() {

@@ -5,6 +5,7 @@
 #include "gtp.h"
 #include "network.h"
 #include "packet.h"
+#include "ports.h"
 #include "s1ap.h"
 #include "sync.h"
 #include "udp_client.h"
