@@ -1,5 +1,6 @@
 #include "amf.h"
 #include "discover.h"
+#include "rest_utils.h"
 #include <jsoncpp/json/json.h>
 #include <nghttp2/asio_http2_client.h>
 
@@ -177,62 +178,26 @@ void Amf::handle_initial_attach(int conn_fd, Packet pkt, SctpClient &ausf_client
 	nw_type = ue_ctx[guti].nw_type;
 	TRACE(cout << "amf_handleinitialattach:" << ":ue entry added: " << guti << endl;)
 	
-	Json::Value requestPkt;
+	Json::Value requestPkt, jsonRes;
 	requestPkt["imsi"] = to_string(imsi);
 	requestPkt["plmn_id"] = to_string(amf_ids.plmn_id);
 	requestPkt["num_autn_vectors"] = to_string(num_autn_vectors);
 	requestPkt["nw_type"] = to_string(nw_type);
 
-	Json::FastWriter fastWriter;
-	std::string jsonPkt = fastWriter.write(requestPkt);
-	std::string jsonResponsePkt = "";
+	bool parsingSuccessful = send_and_receive(
+		g_ausf_ip_addr, 
+		AUSF_AMF_PORT_START_RANGE + worker_id, 
+		"/Nausf_UEAuthentication",
+		requestPkt, jsonRes
+	);
 
-	session sess(io_service, g_ausf_ip_addr, to_string(AUSF_AMF_PORT_START_RANGE + worker_id));
+	if(!parsingSuccessful) {
+		// TODO: handle error
+	}
 
-	sess.on_connect([&sess, &worker_id, &jsonPkt, &jsonResponsePkt](tcp::resolver::iterator endpoint_it) {
-		boost::system::error_code ec;
-		string port_id = to_string(AUSF_AMF_PORT_START_RANGE + worker_id);
-		string uri = "http://" + g_ausf_ip_addr + ":" + port_id + "/Nausf_UEAuthentication";
-		TRACE(cout << "amf_handleinitialattach :: Connecting to " << uri << "\n\tPOST Request\n\tPayload: " << jsonPkt << endl;)
-		auto req = sess.submit(ec, "POST", uri, jsonPkt);
-
-		req->on_response([&jsonPkt, &uri, &jsonResponsePkt, &sess](const response &res) {
-			//TODO handle response errors
-			if(res.status_code() != 200) {
-				cout << "amf_handleinitialattach :: Error Status Code Received from " << uri << " : " << res.status_code() << endl;
-			}
-			res.on_data([&jsonPkt, &jsonResponsePkt, &sess](const uint8_t *data, std::size_t len) {
-				if (len > 0)
-				{
-					const char *s = "";
-					s = reinterpret_cast<const char *>(data);
-					// collecting all the data
-					if(len > 0) {
-						jsonResponsePkt.append(s, len);
-					}
-				}
-			});
-		});
-		req->on_close([&jsonResponsePkt, &uri, &sess](uint32_t error_code) {
-			//shutdown session after first request was done.
-			sess.shutdown();
-		});
-	});
-
-	sess.on_error([](const boost::system::error_code &ec) {
-		std::cerr << "error: " << ec.message() << std::endl;
-	});
-
-	io_service.run();
-
-	TRACE(cout << "amf_handleinitialattach :: Received from : " << jsonResponsePkt << endl;)
+	TRACE(cout << "amf_handleinitialattach :: Received from : " << jsonRes.asString() << endl;)
 	TRACE(cout << "amf_handleinitialattach :: " << " request sent to ausf: " << guti << endl;)
-
-	Json::Value jsonRes;
-	Json::Reader reader;
-
-	bool parsingSuccessful = reader.parse(jsonResponsePkt, jsonRes);
-
+	
 	// TODO: have isMember check?
 	autn_num = jsonRes["autn_num"].asUInt64();
 	rand_num = jsonRes["rand_num"].asUInt64();
@@ -565,7 +530,7 @@ void Amf::handle_create_session(int conn_fd, Packet pkt, UdpClient &smf_client, 
 
 	TRACE(cout << "amf_createsession:" << " create session request sent to smf: " << guti << endl;)
 
-	Json::Value requestPkt;
+	Json::Value requestPkt, jsonRes;
 	requestPkt["guti"] = to_string(guti);
 	requestPkt["imsi"] = to_string(imsi);
 	requestPkt["s11_cteid_mme"] = to_string(s11_cteid_amf);
@@ -573,56 +538,15 @@ void Amf::handle_create_session(int conn_fd, Packet pkt, UdpClient &smf_client, 
 	requestPkt["apn_in_use"] = to_string(apn_in_use);
 	requestPkt["tai"] = to_string(tai);
 
-	Json::FastWriter fastWriter;
-	std::string jsonPkt = fastWriter.write(requestPkt);
-	std::string jsonResponsePkt = "";
+	bool parsingSuccessful = send_and_receive(
+		smf_amf_ip_addr, 
+		SMF_AMF_PORT_START_RANGE + worker_id, 
+		"/Nsmf_PDUSession/CreateSMContext",
+		requestPkt, jsonRes
+	);
 
-	boost::asio::io_service io_service;
-	session sess(io_service, smf_amf_ip_addr, to_string(SMF_AMF_PORT_START_RANGE + worker_id));
-
-	sess.on_connect([&sess, &worker_id, &jsonPkt, &jsonResponsePkt](tcp::resolver::iterator endpoint_it) {
-		boost::system::error_code ec;
-		string port_id = to_string(SMF_AMF_PORT_START_RANGE + worker_id);
-		string uri = "http://" + smf_amf_ip_addr + ":" + port_id + "/Nsmf_PDUSession/CreateSMContext";
-		cout << "amf_createsession: Connecting to " << uri << "\n\tPOST Request\n\tPayload: " << jsonPkt << endl;
-		auto req = sess.submit(ec, "POST", uri, jsonPkt);
-
-		req->on_response([&jsonPkt, &uri, &jsonResponsePkt, &sess](const response &res) {
-			//TODO handle respone errors
-			if(res.status_code() != 200) {
-				cout << "amf_createsession: Connecting to " << uri << " failed with Status_Code : " << res.status_code() << endl;
-			}
-			res.on_data([&jsonPkt, &jsonResponsePkt, &sess](const uint8_t *data, std::size_t len) {
-				if (len > 0)
-				{
-					const char *s = "";
-					s = reinterpret_cast<const char *>(data);
-					// collecting all the data
-					if(len > 0) {
-						jsonResponsePkt.append(s, len);
-					}
-				}
-			});
-		});
-		req->on_close([&jsonResponsePkt, &uri, &sess](uint32_t error_code) {
-			//shutdown session after first request was done.
-			sess.shutdown();
-		});
-	});
-
-	sess.on_error([](const boost::system::error_code &ec) {
-		std::cerr << "error: " << ec.message() << std::endl;
-	});
-
-	io_service.run();
-
-	TRACE(cout << "amf_createsession :: Received from SMF : " << jsonResponsePkt << endl;)
+	TRACE(cout << "amf_createsession :: Received from SMF : " << jsonRes.asString() << endl;)
 	TRACE(cout << "amf_createsession:" << " create session response received smf: " << guti << endl;)
-
-	Json::Value jsonRes;
-	Json::Reader reader;
-
-	bool parsingSuccessful = reader.parse(jsonResponsePkt, jsonRes);
 
 	//TODO handle respone errors
 	if(!parsingSuccessful) {
@@ -849,65 +773,25 @@ void Amf::handle_modify_bearer(Packet pkt, UdpClient &smf_client, SctpClient &ud
 
 	TRACE(cout << "amf_handlemodifybearer:" << " modify bearer request sent to smf: " << guti << endl;)
 
-	Json::Value requestPkt;
+	Json::Value requestPkt, jsonRes;
 	requestPkt["guti"] = to_string(guti);
 	requestPkt["s1_uteid_dl"] = to_string(s1_uteid_dl);
 	requestPkt["eps_bearer_id"] = to_string(eps_bearer_id);
 	requestPkt["g_trafmon_ip_addr"] = g_trafmon_ip_addr;
 	requestPkt["g_trafmon_port"] = to_string(g_trafmon_port);
 
-	Json::FastWriter fastWriter;
-	std::string jsonPkt = fastWriter.write(requestPkt);
-	std::string jsonResponsePkt = "";
+	bool parsingSuccessful = send_and_receive(
+		smf_amf_ip_addr, 
+		SMF_AMF_PORT_START_RANGE + worker_id, 
+		"/Nsmf_PDUSession/UpdateSMContext",
+		requestPkt, jsonRes
+	);
 
-	boost::asio::io_service io_service;
-	session sess(io_service, smf_amf_ip_addr, to_string(SMF_AMF_PORT_START_RANGE + worker_id));
-
-	sess.on_connect([&sess, &worker_id, &jsonPkt, &jsonResponsePkt](tcp::resolver::iterator endpoint_it) {
-		boost::system::error_code ec;
-		string port_id = to_string(SMF_AMF_PORT_START_RANGE + worker_id);
-		string uri = "http://" + smf_amf_ip_addr + ":" + port_id + "/Nsmf_PDUSession/UpdateSMContext";
-		cout << "Connecting to " << uri << "\n\tPOST Request\n\tPayload: " << jsonPkt << endl;
-		auto req = sess.submit(ec, "POST", uri, jsonPkt);
-
-		req->on_response([&jsonPkt, &uri, &jsonResponsePkt, &sess](const response &res) {
-			//TODO handle response errors
-			if(res.status_code() != 200) {
-				TRACE(cout << "ERROR << amf_handlemodifybearer:" << " modify bearer failure: " << "Connecting to " << uri << " failed with Status_Code : " << res.status_code() << endl;)
-			}
-			res.on_data([&jsonPkt, &jsonResponsePkt, &sess](const uint8_t *data, std::size_t len) {
-				if (len > 0)
-				{
-					const char *s = "";
-					s = reinterpret_cast<const char *>(data);
-					// collecting all the data
-					if(len > 0) {
-						jsonResponsePkt.append(s, len);
-					}
-				}
-			});
-		});
-		req->on_close([&jsonResponsePkt, &uri, &sess](uint32_t error_code) {
-			//shutdown session after first request was done.
-			sess.shutdown();
-		});
-	});
-
-	sess.on_error([](const boost::system::error_code &ec) {
-		std::cerr << "error: " << ec.message() << std::endl;
-	});
-
-	io_service.run();
-
-	TRACE(cout << "amf_handlemodifybearer :: Received from SMF : " << jsonResponsePkt << endl;)
+	TRACE(cout << "amf_handlemodifybearer :: Received from SMF : " << jsonRes.asString() << endl;)
 	TRACE(cout << "amf_handlemodifybearer:" << " modify bearer response received from smf: " << guti << endl;)
 
-	Json::Value jsonRes;
-	Json::Reader reader;
 
-	bool parsingSuccessful = reader.parse(jsonResponsePkt, jsonRes);
-
-	//TODO handle response errors
+	// TODO handle response errors
 	if(!parsingSuccessful) {
 		TRACE(cout << "ERROR :: amf_handlemodifybearer:" << " modify bearer failure: JSON parsing failed" << endl;)
 	}
@@ -1156,61 +1040,20 @@ void Amf::handle_detach(int conn_fd, Packet pkt, UdpClient &smf_client, SctpClie
 
 	TRACE(cout << "amf_handledetach:" << " detach request sent to smf: " << guti << endl;)
 
-	Json::Value requestPkt;
+	Json::Value requestPkt, jsonRes;
 	requestPkt["guti"] = to_string(guti);
 	requestPkt["eps_bearer_id"] = to_string(eps_bearer_id);
 	requestPkt["tai"] = to_string(tai);
 
-	Json::FastWriter fastWriter;
-	std::string jsonPkt = fastWriter.write(requestPkt);
-	std::string jsonResponsePkt = "";
+	bool parsingSuccessful = send_and_receive(
+		smf_amf_ip_addr, 
+		SMF_AMF_PORT_START_RANGE + worker_id, 
+		"/Nsmf_PDUSession/ReleaseSMContext",
+		requestPkt, jsonRes
+	);
 
-	boost::asio::io_service io_service;
-	session sess(io_service, smf_amf_ip_addr, to_string(SMF_AMF_PORT_START_RANGE + worker_id));
-
-	sess.on_connect([&sess, &worker_id, &jsonPkt, &jsonResponsePkt](tcp::resolver::iterator endpoint_it) {
-		boost::system::error_code ec;
-		string port_id = to_string(SMF_AMF_PORT_START_RANGE + worker_id);
-		string uri = "http://" + smf_amf_ip_addr + ":" + port_id + "/Nsmf_PDUSession/ReleaseSMContext";
-		cout << "Connecting to " << uri << "\n\tPOST Request\n\tPayload: " << jsonPkt << endl;
-		auto req = sess.submit(ec, "POST", uri, jsonPkt);
-
-		req->on_response([&jsonPkt, &uri, &jsonResponsePkt, &sess](const response &res) {
-			//TODO handle respone errors
-			if(res.status_code() != 200) {
-				cout << "Connecting to " << uri << " failed with Status_Code : " << res.status_code() << endl;
-			}
-			res.on_data([&jsonPkt, &jsonResponsePkt, &sess](const uint8_t *data, std::size_t len) {
-				if (len > 0)
-				{
-					const char *s = "";
-					s = reinterpret_cast<const char *>(data);
-					// collecting all the data
-					if(len > 0) {
-						jsonResponsePkt.append(s, len);
-					}
-				}
-			});
-		});
-		req->on_close([&jsonResponsePkt, &uri, &sess](uint32_t error_code) {
-			//shutdown session after first request was done.
-			sess.shutdown();
-		});
-	});
-
-	sess.on_error([](const boost::system::error_code &ec) {
-		std::cerr << "error: " << ec.message() << std::endl;
-	});
-
-	io_service.run();
-
-	TRACE(cout << "amf_handledetach :: Received from SMF : " << jsonResponsePkt << endl;)
+	TRACE(cout << "amf_handledetach :: Received from SMF : " << jsonRes.asString() << endl;)
 	TRACE(cout << "amf_handledetach:" << " detach response received from smf: " << guti << endl;)
-
-	Json::Value jsonRes;
-	Json::Reader reader;
-
-	bool parsingSuccessful = reader.parse(jsonResponsePkt, jsonRes);
 
 	// TODO handle respone errors
 	if(!parsingSuccessful) {
