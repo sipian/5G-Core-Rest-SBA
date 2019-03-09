@@ -108,12 +108,12 @@ Amf::Amf() {
 
 	g_trafmon_ip_addr = resolve_host("ran");
 	g_amf_ip_addr = getMyIPAddress();
-	g_ausf_ip_addr = serviceDiscover("ausf", consulAgent);
+	g_ausf_ip_addr = serviceDiscovery("ausf", consulAgent);
 	g_upf_smf_ip_addr = resolve_host("upf");
-	smf_amf_ip_addr = serviceDiscover("smf", consulAgent);
+	smf_amf_ip_addr = serviceDiscovery("smf", consulAgent);
 	g_upf_s1_ip_addr = resolve_host("upf");
 	g_upf_s11_ip_addr = resolve_host("upf");
-	g_udm_ip_addr = serviceDiscover("udm", consulAgent);
+	g_udm_ip_addr = serviceDiscovery("udm", consulAgent);
 }
 
 void Amf::clrstl() {

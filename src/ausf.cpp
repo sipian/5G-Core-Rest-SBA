@@ -18,7 +18,7 @@ Ausf::Ausf() {
 	serviceRegister("ausf", consulAgent);
 
 	g_ausf_ip_addr = getMyIPAddress();
-	g_udm_ip_addr = serviceDiscover("udm", consulAgent);
+	g_udm_ip_addr = serviceDiscovery("udm", consulAgent);
 }
 
 
