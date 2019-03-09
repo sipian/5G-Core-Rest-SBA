@@ -26,7 +26,7 @@ amf.o: ports.h diameter.h gtp.h network.h packet.h s1ap.h sctp_client.h sctp_ser
 amf_server.o: ports.h diameter.h gtp.h amf.h amf_server.cpp amf_server.h network.h packet.h s1ap.h sctp_client.h sctp_server.h security.h sync.h telecom.h udp_client.h utils.h
 	$(G++) -c -o amf_server.o amf_server.cpp 
 
-ausf.o:  diameter.h gtp.h ausf.cpp ausf.h mysql.h network.h packet.h s1ap.h sctp_server.h sctp_client.h sync.h utils.h
+ausf.o: ports.h diameter.h gtp.h ausf.cpp ausf.h mysql.h network.h packet.h s1ap.h sctp_server.h sctp_client.h sync.h utils.h
 	$(G++) -c -o ausf.o ausf.cpp      
 
 ausf_server.o: ports.h diameter.h gtp.h ausf.h ausf_server.cpp ausf_server.h mysql.h network.h packet.h s1ap.h sctp_server.h sctp_client.h sync.h utils.h
@@ -46,7 +46,7 @@ mme_server.o:	diameter.h gtp.h mme.h mme_server.cpp mme_server.h network.h packe
 	$(G++) -c -o mme_server.o mme_server.cpp	
 
 
-smf.o:	diameter.h gtp.h smf.cpp smf.h network.h packet.h s1ap.h sctp_client.h sctp_server.h security.h sync.h telecom.h udp_client.h udp_server.h utils.h
+smf.o: ports.h diameter.h gtp.h smf.cpp smf.h network.h packet.h s1ap.h sctp_client.h sctp_server.h security.h sync.h telecom.h udp_client.h udp_server.h utils.h
 	$(G++) -c -o smf.o smf.cpp
 
 smf_server.o: ports.h diameter.h gtp.h smf.h smf_server.cpp smf_server.h network.h packet.h s1ap.h sctp_client.h sctp_server.h security.h sync.h telecom.h udp_client.h udp_server.h utils.h
@@ -67,10 +67,10 @@ pgw.o:	diameter.h gtp.h network.h packet.h pgw.cpp pgw.h s1ap.h sync.h udp_clien
 pgw_server.o:	diameter.h gtp.h network.h packet.h pgw.h pgw_server.cpp pgw_server.h s1ap.h sync.h udp_client.h udp_server.h utils.h
 	$(G++) -c -o pgw_server.o pgw_server.cpp
 
-ran.o:	diameter.h gtp.h network.h packet.h ran.cpp ran.h s1ap.h sctp_client.h security.h sync.h telecom.h tun.h udp_client.h udp_server.h utils.h
+ran.o: ports.h diameter.h gtp.h network.h packet.h ran.cpp ran.h s1ap.h sctp_client.h security.h sync.h telecom.h tun.h udp_client.h udp_server.h utils.h
 	$(G++) -c -o ran.o ran.cpp
 
-ran_simulator.o:	diameter.h gtp.h network.h packet.h ran.h ran_simulator.cpp ran_simulator.h s1ap.h sctp_server.h sctp_client.h security.h sync.h telecom.h tun.h udp_client.h udp_server.h utils.h
+ran_simulator.o: ports.h diameter.h gtp.h network.h packet.h ran.h ran_simulator.cpp ran_simulator.h s1ap.h sctp_server.h sctp_client.h security.h sync.h telecom.h tun.h udp_client.h udp_server.h utils.h
 	$(G++) -c -o ran_simulator.o ran_simulator.cpp
 
 s1ap.o:	s1ap.cpp s1ap.h utils.h
@@ -91,7 +91,7 @@ sgw.o:	diameter.h gtp.h network.h packet.h s1ap.h sgw.cpp sgw.h sync.h udp_clien
 sgw_server.o:	diameter.h gtp.h network.h packet.h s1ap.h sgw.h sgw_server.cpp sgw_server.h sync.h udp_client.h udp_server.h utils.h
 	$(G++) -c -o sgw_server.o sgw_server.cpp
 
-sink.o:	diameter.h gtp.h network.h packet.h s1ap.h sink.cpp sink.h tun.h udp_client.h udp_server.h utils.h
+sink.o: ports.h diameter.h gtp.h network.h packet.h s1ap.h sink.cpp sink.h tun.h udp_client.h udp_server.h utils.h
 	$(G++) -c -o sink.o sink.cpp
 
 sink_server.o: ports.h diameter.h gtp.h network.h packet.h s1ap.h sink.h sink_server.cpp sink_server.h tun.h udp_client.h udp_server.h utils.h
@@ -114,16 +114,16 @@ udp_server.o:	diameter.h gtp.h network.h packet.h s1ap.h udp_server.cpp udp_serv
 
 utils.o:	utils.cpp utils.h
 	$(G++) -c -o utils.o utils.cpp
-upf.o:  diameter.h gtp.h network.h packet.h upf.cpp s1ap.h sync.h udp_client.h udp_server.h utils.h
+upf.o: ports.h diameter.h gtp.h network.h packet.h upf.cpp s1ap.h sync.h udp_client.h udp_server.h utils.h
 	$(G++) -c -o upf.o upf.cpp
 
 upf_server.o: ports.h diameter.h gtp.h network.h packet.h upf_server.cpp upf_server.h upf.h s1ap.h sync.h udp_client.h udp_server.h utils.h
 	$(G++) -c -o upf_server.o upf_server.cpp
 
-udm.o: diameter.h gtp.h udm.cpp udm.h mysql.h network.h packet.h s1ap.h sctp_server.h sctp_client.h sync.h utils.h
+udm.o: ports.h diameter.h gtp.h udm.cpp udm.h mysql.h network.h packet.h s1ap.h sctp_server.h sctp_client.h sync.h utils.h
 	$(G++) -c -o udm.o udm.cpp 
 
-udm_server.o: diameter.h gtp.h udm.h udm_server.cpp udm_server.h mysql.h network.h packet.h s1ap.h sctp_server.h sctp_client.h sync.h utils.h
+udm_server.o: ports.h diameter.h gtp.h udm.h udm_server.cpp udm_server.h mysql.h network.h packet.h s1ap.h sctp_server.h sctp_client.h sync.h utils.h
 	$(G++) -c -o udm_server.o udm_server.cpp
 
 #-------------------------------------------#
@@ -136,11 +136,11 @@ HSS_P = diameter.o gtp.o hss.o hss_server.o mysql.o network.o packet.o s1ap.o sc
 HSS_R = $(G++) -o hss.out $(HSS_P) -pthread `mysql_config --cflags --libs`
 
 AUSF_P = diameter.o gtp.o ausf.o ausf_server.o mysql.o network.o packet.o s1ap.o sctp_server.o sctp_client.o sync.o utils.o
-AUSF_R = $(G++) -o ausf.out $(AUSF_P) -pthread -ljsoncpp -lnghttp2_asio -lboost_system -lcrypto -lssl `mysql_config --cflags --libs`
+AUSF_R = $(G++) -o ausf.out $(AUSF_P) -pthread -lppconsul -ljsoncpp -lnghttp2_asio -lboost_system -lcrypto -lssl `mysql_config --cflags --libs`
 
 
 AMF_P = diameter.o gtp.o amf.o amf_server.o network.o packet.o s1ap.o sctp_client.o sctp_server.o security.o sync.o telecom.o udp_client.o utils.o
-AMF_R = $(G++) -o amf.out $(AMF_P) -pthread -lnghttp2_asio -ljsoncpp -lboost_system -lcrypto -lssl
+AMF_R = $(G++) -o amf.out $(AMF_P) -pthread -lppconsul -lnghttp2_asio -ljsoncpp -lboost_system -lcrypto -lssl
 
 
 MME_P = diameter.o gtp.o mme.o mme_server.o network.o packet.o s1ap.o sctp_client.o sctp_server.o security.o sync.o telecom.o udp_client.o utils.o
@@ -148,25 +148,25 @@ MME_R = $(G++) -o mme.out $(MME_P) -pthread -lcrypto
 
 
 SMF_P = diameter.o gtp.o smf.o smf_server.o network.o packet.o s1ap.o sctp_client.o sctp_server.o security.o sync.o telecom.o udp_client.o udp_server.o utils.o
-SMF_R = $(G++) -o smf.out $(SMF_P) -pthread -lnghttp2_asio -ljsoncpp -lboost_system -lcrypto -lssl
+SMF_R = $(G++) -o smf.out $(SMF_P) -pthread -lppconsul -lnghttp2_asio -ljsoncpp -lboost_system -lcrypto -lssl
 
 PGW_P = diameter.o gtp.o network.o packet.o pgw.o pgw_server.o s1ap.o sync.o udp_client.o udp_server.o utils.o
 PGW_R = $(G++) -o pgw.out $(PGW_P) -pthread -lnghttp2_asio -lboost_system -lcrypto -lssl
 
 RAN_P = diameter.o gtp.o network.o packet.o ran.o ran_simulator.o s1ap.o sctp_client.o sctp_server.o security.o sync.o telecom.o tun.o udp_client.o udp_server.o utils.o
-RAN_R = $(G++) -o ransim.out $(RAN_P) -pthread -lcrypto -ljsoncpp -lnghttp2_asio -lboost_system -lssl
+RAN_R = $(G++) -o ransim.out $(RAN_P) -pthread -lppconsul -lcrypto -ljsoncpp -lnghttp2_asio -lboost_system -lssl
 
 SGW_P = diameter.o gtp.o network.o packet.o s1ap.o sgw.o sgw_server.o sync.o udp_client.o udp_server.o utils.o
 SGW_R = $(G++) -o sgw.out $(SGW_P) -pthread
 
 SINK_P = diameter.o gtp.o network.o packet.o s1ap.o sink.o sink_server.o tun.o udp_client.o udp_server.o utils.o
-SINK_R = $(G++) -o sink.out $(SINK_P) -pthread -lnghttp2_asio -ljsoncpp -lboost_system -lcrypto -lssl
+SINK_R = $(G++) -o sink.out $(SINK_P) -pthread -lppconsul -lnghttp2_asio -ljsoncpp -lboost_system -lcrypto -lssl
 
 UPF_P = diameter.o gtp.o network.o packet.o upf.o upf_server.o s1ap.o sync.o udp_client.o udp_server.o utils.o
-UPF_R = $(G++) -o upf.out $(UPF_P) -pthread -lnghttp2_asio -lboost_system -ljsoncpp -lcrypto -lssl
+UPF_R = $(G++) -o upf.out $(UPF_P) -pthread -lppconsul -lnghttp2_asio -lboost_system -ljsoncpp -lcrypto -lssl
 
 UDM_P = diameter.o gtp.o udm.o udm_server.o mysql.o network.o packet.o s1ap.o sctp_server.o sctp_client.o sync.o utils.o
-UDM_R = $(G++) -o udm.out $(UDM_P) -pthread `mysql_config --cflags --libs` -lcrypto -ljsoncpp -lnghttp2_asio -lboost_system -lcrypto -lssl
+UDM_R = $(G++) -o udm.out $(UDM_P) -pthread -lppconsul `mysql_config --cflags --libs` -lcrypto -ljsoncpp -lnghttp2_asio -lboost_system -lcrypto -lssl
 
 #-------------------------------------------#
 
