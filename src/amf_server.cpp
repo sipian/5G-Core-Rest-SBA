@@ -50,7 +50,7 @@ int handle_ue(int conn_fd, int worker_id) {
 			/* Initial Attach request */
 			case 1: 
 				TRACE(cout << "amfserver_handleue:" << " case 1: initial attach" << endl;)
-				g_amf.handle_initial_attach(conn_fd, pkt, ausf_clients[worker_id], udm_clients[worker_id],worker_id);
+				g_amf.handle_initial_attach(conn_fd, pkt, ausf_clients[worker_id], worker_id);
 				break;
 
 			/* For error handling */

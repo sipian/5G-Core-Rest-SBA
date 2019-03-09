@@ -132,7 +132,7 @@ private:
 public:
 	SctpServer server;
 	Amf();
-	void handle_initial_attach(int, Packet, SctpClient&, SctpClient&,int);
+	void handle_initial_attach(int, Packet, SctpClient&, int);
 	bool handle_autn(int, Packet, SctpClient&);
 	void handle_security_mode_cmd(int, Packet, SctpClient&);
 	bool handle_security_mode_complete(int, Packet, SctpClient&);

@@ -11,7 +11,6 @@ using namespace nghttp2::asio_http2::server;
 
 Ausf g_ausf;
 int g_workers_count;
-vector<SctpClient> udm_clients;
 vector<thread> rest_servers;
 Json::FastWriter fastWriter;
 
@@ -24,7 +23,6 @@ void check_usage(int argc) {
 
 void init(char *argv[]) {
 	g_workers_count = atoi(argv[1]);
-	udm_clients.resize(g_workers_count);
 	rest_servers.resize(g_workers_count);
 	if (mysql_library_init(0, NULL, NULL)) {
 		g_utils.handle_type1_error(-1, "mysql_library_init error: ausfserver_init");
@@ -141,11 +139,6 @@ void run() {
 	// g_ausf.handle_mysql_conn();
 	/* HSS server */
 	
-	for(int i=0;i<g_workers_count;i++){
-		udm_clients[i].conn(g_udm_ip_addr, g_udm_port);
-	}
-	TRACE(cout << "udm clients started" << endl;)
-
 	for(int i=0;i<g_workers_count;i++)
 		rest_servers[i] = thread(rest_server,i);
 	

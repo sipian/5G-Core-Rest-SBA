@@ -159,11 +159,11 @@ std::string Udm::update_info_amf_initial_attach(Json::Value &jsonPkt) {
 
 std::string Udm::update_info_amf_initial_attach_init(Json::Value &jsonPkt) {
 	uint64_t imsi = jsonPkt["imsi"].asUInt64();
-	uint64_t tai = jsonPkt["imsi"].asUInt64();
-	uint16_t nw_capability = jsonPkt["imsi"].asUInt();
-	uint32_t enodeb_s1ap_ue_id = jsonPkt["imsi"].asUInt();
-	uint32_t mme_s1ap_ue_id = jsonPkt["imsi"].asUInt();
-	uint64_t guti = jsonPkt["imsi"].asUInt64();
+	uint64_t tai = jsonPkt["tai"].asUInt64();
+	uint16_t nw_capability = jsonPkt["nw_capability"].asUInt();
+	uint32_t enodeb_s1ap_ue_id = jsonPkt["enodeb_s1ap_ue_id"].asUInt();
+	uint32_t mme_s1ap_ue_id = jsonPkt["mme_s1ap_ue_id"].asUInt();
+	uint64_t guti = jsonPkt["guti"].asUInt64();
 
 	// now will just update the ue_contxt for the guti appended in the packet.
 	g_sync.mlock(uectx_mux);

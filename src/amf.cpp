@@ -125,7 +125,7 @@ uint32_t Amf::get_s11cteidamf(uint64_t guti) {
 	return s11_cteid_amf;
 }
 
-void Amf::handle_initial_attach(int conn_fd, Packet pkt, SctpClient &ausf_client, SctpClient &udm_client, int worker_id) {
+void Amf::handle_initial_attach(int conn_fd, Packet pkt, SctpClient &ausf_client, int worker_id) {
 
 	uint64_t imsi;
 	uint64_t tai;
@@ -165,25 +165,31 @@ void Amf::handle_initial_attach(int conn_fd, Packet pkt, SctpClient &ausf_client
 	// ue_ctx[guti].init(imsi, enodeb_s1ap_ue_id, mme_s1ap_ue_id, tai, nw_capability);
 	// g_sync.munlock(uectx_mux);
 
-	pkt.clear_pkt();
-	pkt.append_item(guti);
-	pkt.append_item(imsi);
-	pkt.append_item(enodeb_s1ap_ue_id);
-	pkt.append_item(mme_s1ap_ue_id);
-	pkt.append_item(tai);
-	pkt.append_item(nw_capability);
-	pkt.prepend_diameter_hdr(3,pkt.len);
-	udm_client.snd(pkt);
+
+	Json::Value reqPkt, jsonRes;
+	reqPkt["guti"] = to_string(guti);
+	reqPkt["imsi"] = to_string(imsi);
+	reqPkt["enodeb_s1ap_ue_id"] = to_string(enodeb_s1ap_ue_id);
+	reqPkt["mme_s1ap_ue_id"] = to_string(mme_s1ap_ue_id);
+	reqPkt["tai"] = to_string(tai);
+	reqPkt["nw_capability"] = to_string(nw_capability);
+
+	send_and_receive(
+		g_udm_ip_addr, 
+		UDM_PORT_START_RANGE + worker_id, 
+		"/Nudm_UECM/3",
+		reqPkt, jsonRes
+	);
 
 	nw_type = ue_ctx[guti].nw_type;
 	TRACE(cout << "amf_handleinitialattach:" << ":ue entry added: " << guti << endl;)
 	
-	Json::Value requestPkt, jsonRes;
+	jsonRes.clear();
+	Json::Value requestPkt;
 	requestPkt["imsi"] = to_string(imsi);
 	requestPkt["plmn_id"] = to_string(amf_ids.plmn_id);
 	requestPkt["num_autn_vectors"] = to_string(num_autn_vectors);
 	requestPkt["nw_type"] = to_string(nw_type);
-
 	bool parsingSuccessful = send_and_receive(
 		g_ausf_ip_addr, 
 		AUSF_AMF_PORT_START_RANGE + worker_id, 
@@ -212,13 +218,20 @@ void Amf::handle_initial_attach(int conn_fd, Packet pkt, SctpClient &ausf_client
 	// g_sync.munlock(uectx_mux);
 	//
 	// will send the UPDATE request to the udm for updation of ue_context.
-	pkt.clear_pkt();
-	pkt.append_item(guti);
-	pkt.append_item(xres);
-	pkt.append_item(k_asme);
-	pkt.append_item(1);
-	pkt.prepend_diameter_hdr(4,pkt.len);
-	udm_client.snd(pkt);
+
+	requestPkt.clear();
+	jsonRes.clear();
+	requestPkt["guti"] = to_string(guti);
+	requestPkt["xres"] = to_string(xres);
+	requestPkt["k_asme"] = to_string(k_asme);
+	requestPkt["ksi_asme"] = "1";
+	send_and_receive(
+		g_ausf_ip_addr, 
+		AUSF_AMF_PORT_START_RANGE + worker_id, 
+		"/Nudm_UECM/4",
+		requestPkt, jsonRes
+	);
+
 
 	// TRACE(cout << "amf_handleinitialattach:" << " autn:" << autn_num <<" rand:" << rand_num << " xres:" << xres << " k_asme:" << k_asme << " " << guti << endl;)
 
