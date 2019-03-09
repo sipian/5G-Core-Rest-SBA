@@ -122,9 +122,9 @@ private:
 	pthread_mutex_t uectx_mux; /* Handles ue_ctx */
 	void clrstl();
 	uint32_t get_s11cteidamf(uint64_t);//
-	void set_crypt_context(uint64_t, SctpClient&);
-	void set_integrity_context(uint64_t, SctpClient&);
-	void set_upf_info(uint64_t,SctpClient&);//
+	void set_crypt_context(uint64_t, int);
+	void set_integrity_context(uint64_t, int);
+	void set_upf_info(uint64_t, int);//
 	uint64_t get_guti(Packet);//
 	void rem_itfid(uint32_t);
 	void rem_uectx(uint64_t);
@@ -132,17 +132,17 @@ private:
 public:
 	SctpServer server;
 	Amf();
-	void handle_initial_attach(int, Packet, SctpClient&, int);
-	bool handle_autn(int, Packet, SctpClient&);
-	void handle_security_mode_cmd(int, Packet, SctpClient&);
-	bool handle_security_mode_complete(int, Packet, SctpClient&);
-	void handle_location_update(Packet, SctpClient&, SctpClient&);
-	void handle_create_session(int, Packet, UdpClient&, SctpClient&, int);
-	void handle_attach_complete(Packet, SctpClient&);
-	void handle_detach(int, Packet, UdpClient&, SctpClient&, int);
+	void handle_initial_attach(int, Packet, int);
+	bool handle_autn(int, Packet, int);
+	void handle_security_mode_cmd(int, Packet, int);
+	bool handle_security_mode_complete(int, Packet, int);
+	void handle_location_update(Packet, SctpClient&, int);
+	void handle_create_session(int, Packet, UdpClient&, int);
+	void handle_attach_complete(Packet, int);
+	void handle_detach(int, Packet, UdpClient&, int);
 		//handover changes
 	void handle_handover(Packet);
-	void handle_modify_bearer(Packet, UdpClient&, SctpClient&, int);
+	void handle_modify_bearer(Packet, UdpClient&, int);
 	void handle_handover_completion(Packet);
 	void setup_indirect_tunnel(Packet pkt);
 	void request_target_RAN( Packet pkt);
