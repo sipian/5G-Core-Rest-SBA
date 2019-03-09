@@ -1,3 +1,4 @@
+#include "rest_utils.h"
 #include <string>
 #include <iostream>
 #include <jsoncpp/json/json.h>

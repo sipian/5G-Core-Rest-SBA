@@ -20,13 +20,13 @@ diameter.o:	diameter.cpp diameter.h utils.h
 gtp.o:	gtp.cpp gtp.h utils.h
 	$(G++) -c -o gtp.o gtp.cpp
 
-amf.o: ports.h diameter.h gtp.h network.h packet.h s1ap.h sctp_client.h sctp_server.h security.h sync.h telecom.h udp_client.h utils.h amf.cpp amf.h
+amf.o: rest_utils.h ports.h diameter.h gtp.h network.h packet.h s1ap.h sctp_client.h sctp_server.h security.h sync.h telecom.h udp_client.h utils.h amf.cpp amf.h
 	$(G++) -c -o amf.o amf.cpp
 
 amf_server.o: ports.h diameter.h gtp.h amf.h amf_server.cpp amf_server.h network.h packet.h s1ap.h sctp_client.h sctp_server.h security.h sync.h telecom.h udp_client.h utils.h
 	$(G++) -c -o amf_server.o amf_server.cpp 
 
-ausf.o:  diameter.h gtp.h ausf.cpp ausf.h mysql.h network.h packet.h s1ap.h sctp_server.h sctp_client.h sync.h utils.h
+ausf.o: rest_utils.h diameter.h gtp.h ausf.cpp ausf.h mysql.h network.h packet.h s1ap.h sctp_server.h sctp_client.h sync.h utils.h
 	$(G++) -c -o ausf.o ausf.cpp      
 
 ausf_server.o: ports.h diameter.h gtp.h ausf.h ausf_server.cpp ausf_server.h mysql.h network.h packet.h s1ap.h sctp_server.h sctp_client.h sync.h utils.h
@@ -72,6 +72,9 @@ ran.o:	diameter.h gtp.h network.h packet.h ran.cpp ran.h s1ap.h sctp_client.h se
 
 ran_simulator.o:	diameter.h gtp.h network.h packet.h ran.h ran_simulator.cpp ran_simulator.h s1ap.h sctp_server.h sctp_client.h security.h sync.h telecom.h tun.h udp_client.h udp_server.h utils.h
 	$(G++) -c -o ran_simulator.o ran_simulator.cpp
+
+rest_utils.o: rest_utils.h rest_utils.cpp
+	$(G++) -c -o rest_utils.o rest_utils.cpp
 
 s1ap.o:	s1ap.cpp s1ap.h utils.h
 	$(G++) -c -o s1ap.o s1ap.cpp
@@ -135,11 +138,11 @@ udm_server.o: diameter.h gtp.h udm.h udm_server.cpp udm_server.h mysql.h network
 HSS_P = diameter.o gtp.o hss.o hss_server.o mysql.o network.o packet.o s1ap.o sctp_server.o sync.o utils.o
 HSS_R = $(G++) -o hss.out $(HSS_P) -pthread `mysql_config --cflags --libs`
 
-AUSF_P = diameter.o gtp.o ausf.o ausf_server.o mysql.o network.o packet.o s1ap.o sctp_server.o sctp_client.o sync.o utils.o
+AUSF_P = diameter.o gtp.o ausf.o ausf_server.o mysql.o network.o packet.o rest_utils.o s1ap.o sctp_server.o sctp_client.o sync.o utils.o
 AUSF_R = $(G++) -o ausf.out $(AUSF_P) -pthread -ljsoncpp -lnghttp2_asio -lboost_system -lcrypto -lssl `mysql_config --cflags --libs`
 
 
-AMF_P = diameter.o gtp.o amf.o amf_server.o network.o packet.o s1ap.o sctp_client.o sctp_server.o security.o sync.o telecom.o udp_client.o utils.o
+AMF_P = diameter.o gtp.o amf.o amf_server.o network.o packet.o rest_utils.o s1ap.o sctp_client.o sctp_server.o security.o sync.o telecom.o udp_client.o utils.o
 AMF_R = $(G++) -o amf.out $(AMF_P) -pthread -lnghttp2_asio -ljsoncpp -lboost_system -lcrypto -lssl
 
 
