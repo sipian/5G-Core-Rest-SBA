@@ -269,8 +269,8 @@ std::string Udm::ue_ctx_request_handle_location_update(Json::Value &jsonPkt) {
 
 std::string Udm::ue_ctx_request_handle_create_session(Json::Value &jsonPkt) {
 	uint64_t guti = jsonPkt["guti"].asUInt64();
-	uint32_t s11_cteid_amf = jsonPkt["guti"].asUInt();
-	uint8_t eps_bearer_id = jsonPkt["guti"].asUInt();
+	uint32_t s11_cteid_amf = jsonPkt["s11_cteid_amf"].asUInt();
+	uint8_t eps_bearer_id = jsonPkt["eps_bearer_id"].asUInt();
 
 	Json::Value resJsonPkt;
 	Json::FastWriter fastWriter;
@@ -296,14 +296,14 @@ std::string Udm::ue_ctx_update_handle_craete_session(Json::Value &jsonPkt) {
 	uint64_t guti = jsonPkt["guti"].asUInt64();
 	
 	g_sync.mlock(uectx_mux);
-	ue_ctx[guti].ip_addr = jsonPkt["ip_addr"].asString();
+	ue_ctx[guti].ip_addr = jsonPkt["ue_ip_addr"].asString();
 	ue_ctx[guti].s11_cteid_upf = jsonPkt["s11_cteid_upf"].asUInt();
 	ue_ctx[guti].s1_uteid_ul = jsonPkt["s1_uteid_ul"].asUInt();
 
 	ue_ctx[guti].tai_list.clear();
 	ue_ctx[guti].tai_list.push_back(ue_ctx[guti].tai);
 
-	ue_ctx[guti].tau_timer = jsonPkt["s11_cteid_upf"].asUInt64();
+	ue_ctx[guti].tau_timer = jsonPkt["tau_timer"].asUInt64();
 	ue_ctx[guti].e_rab_id = ue_ctx[guti].eps_bearer_id;
 	ue_ctx[guti].k_enodeb = ue_ctx[guti].k_asme;
 	g_sync.munlock(uectx_mux);
