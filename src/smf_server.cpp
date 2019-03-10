@@ -1,4 +1,5 @@
 #include "smf_server.h"
+#include "rest_utils.h"
 #include <nghttp2/asio_http2_server.h>
 #include <jsoncpp/json/json.h>
 
@@ -66,22 +67,22 @@ void createSMContextRequestPayload(CreateSMContextRequestPacket& request, Json::
 }
 
 void createSMContextResponsePayload(CreateSMContextResponsPacket &responsePkt, Json::Value &json_response) {
-	json_response["guti"] = to_string(responsePkt.guti);
-	json_response["eps_bearer_id"] = to_string(responsePkt.eps_bearer_id);
-	json_response["e_rab_id"] = to_string(responsePkt.e_rab_id);
-	json_response["s1_uteid_ul"] = to_string(responsePkt.s1_uteid_ul);
-	json_response["s11_cteid_sgw"] = to_string(responsePkt.s11_cteid_sgw);
-	json_response["k_enodeb"] = to_string(responsePkt.k_enodeb);
-	json_response["tai_list_size"] = to_string(responsePkt.tai_list_size);
+	json_response["guti"] = touint64(responsePkt.guti);
+	json_response["eps_bearer_id"] = touint(responsePkt.eps_bearer_id);
+	json_response["e_rab_id"] = touint(responsePkt.e_rab_id);
+	json_response["s1_uteid_ul"] = touint(responsePkt.s1_uteid_ul);
+	json_response["s11_cteid_sgw"] = touint(responsePkt.s11_cteid_sgw);
+	json_response["k_enodeb"] = touint64(responsePkt.k_enodeb);
+	json_response["tai_list_size"] = toint(responsePkt.tai_list_size);
 	json_response["tai_list"] = Json::arrayValue;
 	for(int i = 0; i < responsePkt.tai_list_size; i++) {
-		json_response["tai_list"].append(to_string(responsePkt.tai_list[i]));
+		json_response["tai_list"].append(touint64(responsePkt.tai_list[i]));
 	}
-	json_response["tau_timer"] = to_string(responsePkt.tau_timer);
+	json_response["tau_timer"] = touint64(responsePkt.tau_timer);
 	json_response["ue_ip_addr"] = responsePkt.ue_ip_addr;
 	json_response["upf_s1_ip_addr"] = responsePkt.upf_s1_ip_addr;
-	json_response["upf_s1_port"] = to_string(responsePkt.upf_s1_port);
-	json_response["res"] = to_string(responsePkt.res);
+	json_response["upf_s1_port"] = toint(responsePkt.upf_s1_port);
+	json_response["res"] = tobool(responsePkt.res);
 }
 
 void updateSMContextRequestPayload(UpdateSMContextRequestPacket& request, Json::Value &root) {
@@ -107,7 +108,7 @@ void updateSMContextRequestPayload(UpdateSMContextRequestPacket& request, Json::
 }
 
 void updateSMContextResponsePayload(UpdateSMContextResponsePacket &responsePkt, Json::Value &json_response) {
-	json_response["res"] = to_string(responsePkt.res);
+	json_response["res"] = tobool(responsePkt.res);
 }
 
 void releaseSMContextRequestPayload(ReleaseSMContextRequestPacket& request, Json::Value &root) {
@@ -125,7 +126,7 @@ void releaseSMContextRequestPayload(ReleaseSMContextRequestPacket& request, Json
 }
 
 void releaseSMContextResponsePayload(ReleaseSMContextResponsePacket &responsePkt, Json::Value &json_response) {
-	json_response["res"] = to_string(responsePkt.res);
+	json_response["res"] = tobool(responsePkt.res);
 }
 
 void handle_s11_traffic(int worker_id) {

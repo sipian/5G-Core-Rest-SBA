@@ -11,5 +11,6 @@ Json::Value touint(uint32_t val);
 Json::Value touint(uint16_t val);
 Json::Value touint(uint8_t val);
 Json::Value toint(int val);
+Json::Value tobool(bool val);
 
 #endif /* REST_UTILS_H */

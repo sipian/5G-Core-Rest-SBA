@@ -20,6 +20,7 @@ Json::Value touint(uint16_t val) { return Json::Value(Json::UInt(val)); }
 Json::Value touint(uint8_t val) { return Json::Value(Json::UInt(val)); }
 
 Json::Value toint(int val) { return Json::Value(Json::Int(val)); }
+Json::Value tobool(bool val) { return Json::Value(val); }
 
 bool send_and_receive(std::string ip_addr, int port, std::string route, Json::Value &sendPkt, Json::Value &recvPkt) {
     bool sess_failed = false;

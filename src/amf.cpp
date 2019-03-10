@@ -202,7 +202,7 @@ void Amf::handle_initial_attach(int conn_fd, Packet pkt, int worker_id) {
 		cout << "amf_handleinitialattach: Response received from AUSF parsing failed" << endl;
 	}
 
-	TRACE(cout << "amf_handleinitialattach :: Received from : " << jsonRes.asString() << endl;)
+	TRACE(cout << "amf_handleinitialattach :: Received from : " << endl;)
 	TRACE(cout << "amf_handleinitialattach :: " << " request sent to ausf: " << guti << endl;)
 	
 	// TODO: have isMember check?
@@ -228,7 +228,7 @@ void Amf::handle_initial_attach(int conn_fd, Packet pkt, int worker_id) {
 	requestPkt["ksi_asme"] = "1";
 	send_and_receive(
 		g_ausf_ip_addr, 
-		AUSF_AMF_PORT_START_RANGE + worker_id, 
+		UDM_PORT_START_RANGE + worker_id, 
 		"/Nudm_UECM/4",
 		requestPkt, jsonRes
 	);

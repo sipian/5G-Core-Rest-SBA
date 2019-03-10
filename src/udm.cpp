@@ -141,6 +141,7 @@ std::string Udm::set_loc_info(Json::Value &jsonPkt) {
 	auto stop = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>(stop-start);
 	cout<<"set loc info time taken is"<<duration.count()<<endl;
+	return "{}";
 }
 
 std::string Udm::update_info_amf_initial_attach(Json::Value &jsonPkt) {
@@ -155,6 +156,7 @@ std::string Udm::update_info_amf_initial_attach(Json::Value &jsonPkt) {
 	ue_ctx[guti].ksi_asme = ksi_asme;
 	g_sync.munlock(uectx_mux);
 	TRACE(cout<<"update amf_initial_attach UE CTX complete"<<endl;)
+	return "{}";
 }
 
 std::string Udm::update_info_amf_initial_attach_init(Json::Value &jsonPkt) {
@@ -175,6 +177,7 @@ std::string Udm::update_info_amf_initial_attach_init(Json::Value &jsonPkt) {
 	g_sync.munlock(uectx_mux);
 
 	TRACE(cout<<"Amf_initial_attach INIT ue contxt updated: "<<endl;)
+	return "{}";
 }
 
 std::string Udm::handle_autn_ue_ctx_request(Json::Value &jsonPkt) {
@@ -220,6 +223,7 @@ std::string Udm::ue_ctx_request_set_crypt_context(Json::Value &jsonPkt) {
 	g_sync.munlock(uectx_mux);
 	
 	TRACE(cout<<"ue ctx set crypt updation done"<<endl;)
+	return "{}";
 }
 
 std::string Udm::ue_ctx_update_set_integrity_context(Json::Value &jsonPkt) {
@@ -231,6 +235,7 @@ std::string Udm::ue_ctx_update_set_integrity_context(Json::Value &jsonPkt) {
 	g_sync.munlock(uectx_mux);
 
 	TRACE(cout<<"ue ctx updated for set integrity context"<<endl;)
+	return "{}";
 }
 
 std::string Udm::ue_ctx_request_handle_security_mode_complete(Json::Value &jsonPkt) {
@@ -357,6 +362,7 @@ std::string Udm::ue_ctx_update_handle_attach_complete(Json::Value &jsonPkt) {
 	ue_ctx[guti].emm_state = 1;
 	g_sync.munlock(uectx_mux);
 	TRACE(cout<<"UE CTX UPADTE from amf handle attach complete"<<endl;)
+	return "{}";
 }
 
 std::string Udm::ue_ctx_request_handle_modify_bearer(Json::Value &jsonPkt) {
@@ -405,6 +411,7 @@ std::string Udm::ue_ctx_update_set_upf_info(Json::Value &jsonPkt) {
 	ue_ctx[guti].upf_smf_port = jsonPkt["upf_smf_port"].asInt();
 	ue_ctx[guti].upf_smf_ip_addr = jsonPkt["upf_smf_ip_addr"].asString();
 	g_sync.munlock(uectx_mux);
+	return "{}";
 }
 
 std::string Udm::ue_ctx_request_smf_handle_create_session(Json::Value &jsonPkt) {
