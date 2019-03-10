@@ -150,6 +150,7 @@ void Smf::handle_create_session(CreateSMContextRequestPacket &requestPkt, Create
 
 	if(!parsingSuccessful) {
 		// TODO: handle error
+		cout << "smf_createsession: ERROR : Failed to parse JSON from response received from UDM." << endl;
 	}
 
 
@@ -213,6 +214,7 @@ void Smf::handle_create_session(CreateSMContextRequestPacket &requestPkt, Create
 
 	if(!parsingSuccessful) {
 		// TODO: handle error
+		cout << "smf_createsession: ERROR : Failed to parse JSON from response received from UDM." << endl;
 	}
 
 	e_rab_id = jsonRes["e_rab_id"].asUInt();
@@ -279,6 +281,7 @@ void Smf::handle_modify_bearer(UpdateSMContextRequestPacket &requestPkt, UpdateS
 
 	if(!parsingSuccessful) {
 		// TODO: handle error
+		cout << "smf_handlemodifybearer: ERROR : Failed to parse JSON from response received from UDM." << endl;
 	}
 
 	eps_bearer_id = jsonRes["eps_bearer_id"].asUInt();
@@ -344,6 +347,7 @@ void Smf::handle_detach(ReleaseSMContextRequestPacket &requestPkt, ReleaseSMCont
 
 	if(!parsingSuccessful) {
 		// TODO: handle error
+		cout << "smf_handledetach: ERROR : Failed to parse JSON from response received from UDM." << endl;
 	}
 
 	s11_cteid_sgw = jsonRes["s11_cteid_sgw"].asUInt();
