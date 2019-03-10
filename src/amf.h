@@ -136,13 +136,13 @@ public:
 	bool handle_autn(int, Packet, int);
 	void handle_security_mode_cmd(int, Packet, int);
 	bool handle_security_mode_complete(int, Packet, int);
-	void handle_location_update(Packet, SctpClient&, int);
-	void handle_create_session(int, Packet, UdpClient&, int);
+	void handle_location_update(Packet, int);
+	void handle_create_session(int, Packet, int);
 	void handle_attach_complete(Packet, int);
-	void handle_detach(int, Packet, UdpClient&, int);
+	void handle_detach(int, Packet, int);
 		//handover changes
 	void handle_handover(Packet);
-	void handle_modify_bearer(Packet, UdpClient&, int);
+	void handle_modify_bearer(Packet, int);
 	void handle_handover_completion(Packet);
 	void setup_indirect_tunnel(Packet pkt);
 	void request_target_RAN( Packet pkt);

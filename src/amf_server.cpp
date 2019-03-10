@@ -2,8 +2,6 @@
 
 Amf g_amf;
 int g_workers_count;
-vector<SctpClient> ausf_clients;
-vector<UdpClient> smf_clients;
 
 void check_usage(int argc) {
 	if (argc < 2) {
@@ -14,8 +12,6 @@ void check_usage(int argc) {
 
 void init(char *argv[]) {
 	g_workers_count = atoi(argv[1]);
-	ausf_clients.resize(g_workers_count);
-	smf_clients.resize(g_workers_count);
 	signal(SIGPIPE, SIG_IGN);
 }
 
@@ -23,12 +19,6 @@ void run() {
 	int i;
 	
 	TRACE(cout << "AMF server started" << endl;)
-	
-	for (i = 0; i < g_workers_count; i++) {
-		ausf_clients[i].conn(g_ausf_ip_addr, g_ausf_port);	
-		smf_clients[i].conn(g_amf_ip_addr, smf_amf_ip_addr, smf_amf_port);
-	}
-	
 	g_amf.server.run(g_amf_ip_addr, g_amf_port, g_workers_count, handle_ue);
 }
 
@@ -72,8 +62,8 @@ int handle_ue(int conn_fd, int worker_id) {
 				TRACE(cout << "amfserver_handleue:" << " case 3: security mode complete" << endl;)
 				res = g_amf.handle_security_mode_complete(conn_fd, pkt, worker_id);
 				if (res) {
-				        g_amf.handle_location_update(pkt, ausf_clients[worker_id], worker_id);
-						g_amf.handle_create_session(conn_fd, pkt, smf_clients[worker_id], worker_id);
+				        g_amf.handle_location_update(pkt, worker_id);
+						g_amf.handle_create_session(conn_fd, pkt, worker_id);
 				}
 				break;
 
@@ -81,13 +71,13 @@ int handle_ue(int conn_fd, int worker_id) {
 			case 4: 
 				TRACE(cout << "amfserver_handleue:" << " case 4: attach complete" << endl;)
 				g_amf.handle_attach_complete(pkt, worker_id);
-				g_amf.handle_modify_bearer(pkt, smf_clients[worker_id], worker_id);
+				g_amf.handle_modify_bearer(pkt, worker_id);
 				break;
 
 			/* Detach request */
 			case 5: 
 				TRACE(cout << "amfserver_handleue:" << " case 5: detach request" << endl;)
-				g_amf.handle_detach(conn_fd, pkt, smf_clients[worker_id], worker_id);
+				g_amf.handle_detach(conn_fd, pkt, worker_id);
 				break;
 			case 7:
 				cout << "amfserver_handleue:" << " case 7:" << endl;

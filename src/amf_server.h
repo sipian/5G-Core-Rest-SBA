@@ -17,9 +17,6 @@
 
 extern Amf g_amf;
 extern int g_workers_count;
-extern vector<SctpClient> ausf_clients;
-extern vector<UdpClient> smf_clients;
-extern vector<SctpClient> udm_clients;
 
 void check_usage(int);
 void init(char**);

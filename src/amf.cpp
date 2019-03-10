@@ -462,7 +462,7 @@ bool Amf::handle_security_mode_complete(int conn_fd, Packet pkt, int worker_id) 
 	}
 }
 
-void Amf::handle_location_update(Packet pkt, SctpClient &ausf_client, int worker_id) {
+void Amf::handle_location_update(Packet pkt, int worker_id) {
 	uint64_t guti;
 	uint64_t imsi;
 	uint64_t default_apn;
@@ -514,7 +514,7 @@ void Amf::handle_location_update(Packet pkt, SctpClient &ausf_client, int worker
 	g_sync.munlock(uectx_mux);
 }
 
-void Amf::handle_create_session(int conn_fd, Packet pkt, UdpClient &smf_client, int worker_id) {
+void Amf::handle_create_session(int conn_fd, Packet pkt, int worker_id) {
 
 	vector<uint64_t> tai_list;
 	uint64_t guti;
@@ -833,7 +833,7 @@ void Amf::handle_attach_complete(Packet pkt, int worker_id) {
 	TRACE(cout << "amf_handleattachcomplete:" << " attach completed: " << guti << endl;)
 }
 
-void Amf::handle_modify_bearer(Packet pkt, UdpClient &smf_client, int worker_id) {
+void Amf::handle_modify_bearer(Packet pkt, int worker_id) {
 
 	uint64_t guti;
 	uint32_t s1_uteid_dl;
@@ -1085,7 +1085,7 @@ void Amf::teardown_indirect_tunnel(Packet pkt) {
 		cout << "tear down complted:" << " " << endl;
 }
 
-void Amf::handle_detach(int conn_fd, Packet pkt, UdpClient &smf_client, int worker_id) {
+void Amf::handle_detach(int conn_fd, Packet pkt, int worker_id) {
 
 	uint64_t guti;
 	uint64_t k_nas_enc;
