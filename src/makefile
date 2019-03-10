@@ -150,7 +150,7 @@ MME_P = diameter.o gtp.o mme.o mme_server.o network.o packet.o s1ap.o sctp_clien
 MME_R = $(G++) -o mme.out $(MME_P) -pthread -lcrypto
 
 
-SMF_P = diameter.o gtp.o smf.o smf_server.o network.o packet.o s1ap.o sctp_client.o sctp_server.o security.o sync.o telecom.o udp_client.o udp_server.o utils.o
+SMF_P = diameter.o gtp.o smf.o smf_server.o network.o packet.o rest_utils.o s1ap.o sctp_client.o sctp_server.o security.o sync.o telecom.o udp_client.o udp_server.o utils.o
 SMF_R = $(G++) -o smf.out $(SMF_P) -pthread -lnghttp2_asio -ljsoncpp -lboost_system -lcrypto -lssl
 
 PGW_P = diameter.o gtp.o network.o packet.o pgw.o pgw_server.o s1ap.o sync.o udp_client.o udp_server.o utils.o
