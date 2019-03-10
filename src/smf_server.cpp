@@ -40,49 +40,28 @@ void run() {
 }
 
 void createSMContextRequestPayload(CreateSMContextRequestPacket& request, Json::Value &root) {
-	istringstream iss;
-	string pktField_string;
-
 	if(root.isMember("guti")) {
-		iss.clear();
-		pktField_string = root["guti"].asString();
-		iss.str(pktField_string);
-		iss >> request.guti;
+		request.guti = root["guti"].asUInt64();
 	}
 
 	if(root.isMember("imsi")) {
-		iss.clear();
-		pktField_string = root["imsi"].asString();
-		iss.str(pktField_string);
-		iss >> request.imsi;
+		request.imsi = root["imsi"].asUInt64();
 	}
 
 	if(root.isMember("s11_cteid_mme")) {
-		iss.clear();
-		pktField_string = root["s11_cteid_mme"].asString();
-		iss.str(pktField_string);
-		iss >> request.s11_cteid_mme;
+		request.s11_cteid_mme = root["s11_cteid_mme"].asUInt();
 	}
 
 	if(root.isMember("eps_bearer_id")) {
-		iss.clear();
-		pktField_string = root["eps_bearer_id"].asString();
-		iss.str(pktField_string);
-		iss >> request.eps_bearer_id;
+		request.eps_bearer_id = root["eps_bearer_id"].asUInt();
 	}
 
 	if(root.isMember("apn_in_use")) {
-		iss.clear();
-		pktField_string = root["apn_in_use"].asString();
-		iss.str(pktField_string);
-		iss >> request.apn_in_use;
+		request.apn_in_use = root["apn_in_use"].asUInt64();
 	}
 
 	if(root.isMember("tai")) {
-		iss.clear();
-		pktField_string = root["tai"].asString();
-		iss.str(pktField_string);
-		iss >> request.tai;
+		request.tai = root["tai"].asUInt64();
 	}
 }
 
@@ -106,42 +85,24 @@ void createSMContextResponsePayload(CreateSMContextResponsPacket &responsePkt, J
 }
 
 void updateSMContextRequestPayload(UpdateSMContextRequestPacket& request, Json::Value &root) {
-	istringstream iss;
-	string pktField_string;
-
 	if(root.isMember("guti")) {
-		iss.clear();
-		pktField_string = root["guti"].asString();
-		iss.str(pktField_string);
-		iss >> request.guti;
+		request.guti = root["guti"].asUInt64();
 	}
 
 	if(root.isMember("s1_uteid_dl")) {
-		iss.clear();
-		pktField_string = root["s1_uteid_dl"].asString();
-		iss.str(pktField_string);
-		iss >> request.s1_uteid_dl;
+		request.s1_uteid_dl = root["s1_uteid_dl"].asUInt();
 	}
 
 	if(root.isMember("eps_bearer_id")) {
-		iss.clear();
-		pktField_string = root["eps_bearer_id"].asString();
-		iss.str(pktField_string);
-		iss >> request.eps_bearer_id;
+		request.eps_bearer_id = root["eps_bearer_id"].asUInt();
 	}
 
 	if(root.isMember("g_trafmon_ip_addr")) {
-		iss.clear();
-		pktField_string = root["g_trafmon_ip_addr"].asString();
-		iss.str(pktField_string);
-		iss >> request.g_trafmon_ip_addr;
+		request.g_trafmon_ip_addr = root["g_trafmon_ip_addr"].asString();
 	}
 
 	if(root.isMember("g_trafmon_port")) {
-		iss.clear();
-		pktField_string = root["g_trafmon_port"].asString();
-		iss.str(pktField_string);
-		iss >> request.g_trafmon_port;
+		request.g_trafmon_port = root["g_trafmon_port"].asInt();
 	}
 }
 
@@ -149,30 +110,17 @@ void updateSMContextResponsePayload(UpdateSMContextResponsePacket &responsePkt, 
 	json_response["res"] = to_string(responsePkt.res);
 }
 
-
 void releaseSMContextRequestPayload(ReleaseSMContextRequestPacket& request, Json::Value &root) {
-	istringstream iss;
-	string pktField_string;
-
 	if(root.isMember("guti")) {
-		iss.clear();
-		pktField_string = root["guti"].asString();
-		iss.str(pktField_string);
-		iss >> request.guti;
+		request.guti = root["guti"].asUInt64();
 	}
 
 	if(root.isMember("eps_bearer_id")) {
-		iss.clear();
-		pktField_string = root["eps_bearer_id"].asString();
-		iss.str(pktField_string);
-		iss >> request.eps_bearer_id;
+	 	request.eps_bearer_id = root["eps_bearer_id"].asUInt();
 	}
 
 	if(root.isMember("tai")) {
-		iss.clear();
-		pktField_string = root["tai"].asString();
-		iss.str(pktField_string);
-		iss >> request.tai;
+		request.tai = root["tai"].asUInt64();
 	}
 }
 
