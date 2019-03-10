@@ -193,7 +193,7 @@ void Amf::handle_initial_attach(int conn_fd, Packet pkt, int worker_id) {
 	bool parsingSuccessful = send_and_receive(
 		g_ausf_ip_addr, 
 		AUSF_AMF_PORT_START_RANGE + worker_id, 
-		"/Nausf_UEAuthentication",
+		"/Nausf_UEAuthentication/Authenticate",
 		requestPkt, jsonRes
 	);
 
@@ -502,7 +502,7 @@ void Amf::handle_location_update(Packet pkt, int worker_id) {
 	parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
 		AUSF_AMF_PORT_START_RANGE + worker_id,
-		"/Nausf_UELocationUpdate",
+		"/Nausf_UEAuthentication/LocationUpdate",
 		reqPkt, jsonRes
 	);
 	TRACE(cout << "amf_handlelocationupdate:" << " loc update response received from ausf: " << guti << endl;)

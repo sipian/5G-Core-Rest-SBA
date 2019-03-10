@@ -37,7 +37,7 @@ void rest_server(int worker_id)
 	string port = to_string(AUSF_AMF_PORT_START_RANGE + worker_id);
 	try
 	{
-		server.handle("/Nausf_UEAuthentication", [&worker_id](const request &req, const response &res) 
+		server.handle("/Nausf_UEAuthentication/Authenticate", [&worker_id](const request &req, const response &res)
 		{
 			req.on_data([&worker_id,&res](const uint8_t *data, size_t len)
 			{
@@ -62,14 +62,14 @@ void rest_server(int worker_id)
 					return;
 				}
 
-				TRACE(cout << "ausfserver_rest_server :: " << "Nausf_UEAuthentication" << endl;)		
+				TRACE(cout << "ausfserver_rest_server :: " << "Nausf_UEAuthentication/Authenticate" << endl;)		
 				res.write_head(200);
 				res.end(g_ausf.handle_autninfo_req(root, worker_id));
 				cout<<"ausfserver_rest_server :: Sent Response to AMF." <<endl;
 			});
 		});
 
-		server.handle("/Nausf_UELocationUpdate", [&worker_id](const request &req, const response &res) 
+		server.handle("/Nausf_UEAuthentication/LocationUpdate", [&worker_id](const request &req, const response &res) 
 		{
 			req.on_data([&worker_id,&res](const uint8_t *data, size_t len)
 			{
@@ -94,7 +94,7 @@ void rest_server(int worker_id)
 					return;
 				}
 
-				TRACE(cout << "ausfserver_rest_server :: " << " case 1: Nausf_UELocationUpdate" << endl;)		
+				TRACE(cout << "ausfserver_rest_server :: " << " case 1: Nausf_UEAuthentication/LocationUpdate" << endl;)		
 				res.write_head(200);
 				res.end(g_ausf.handle_location_update(root, worker_id));
 				cout<<"ausfserver_rest_server :: Sent Response to AMF" <<endl;
