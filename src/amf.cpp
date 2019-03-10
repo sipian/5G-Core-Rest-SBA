@@ -202,8 +202,7 @@ void Amf::handle_initial_attach(int conn_fd, Packet pkt, int worker_id) {
 		cout << "amf_handleinitialattach: Response received from AUSF parsing failed" << endl;
 	}
 
-	TRACE(cout << "amf_handleinitialattach :: Received from : " << jsonRes << endl;)
-	TRACE(cout << "amf_handleinitialattach :: " << " request sent to ausf: " << guti << endl;)
+	TRACE(cout << "amf_handleinitialattach :: Received from AUSF : " << jsonRes << endl;)
 	
 	// TODO: have isMember check?
 	autn_num = jsonRes["autn_num"].asUInt64();
@@ -225,10 +224,10 @@ void Amf::handle_initial_attach(int conn_fd, Packet pkt, int worker_id) {
 	requestPkt["guti"] = touint64(guti);
 	requestPkt["xres"] = touint64(xres);
 	requestPkt["k_asme"] = touint64(k_asme);
-	requestPkt["ksi_asme"] = "1";
+	requestPkt["ksi_asme"] = touint64(1);;
 	send_and_receive(
-		g_ausf_ip_addr, 
-		UDM_PORT_START_RANGE + worker_id, 
+		g_udm_ip_addr,
+		UDM_PORT_START_RANGE + worker_id,
 		"/Nudm_UECM/4",
 		requestPkt, jsonRes
 	);
@@ -278,7 +277,7 @@ bool Amf::handle_autn(int conn_fd, Packet pkt, int worker_id) {
 		cout << "amf_handleautn: Response received from UDM parsing failed" << endl;
 	}
 
-	TRACE(cout<<"amf_handleautn: Packet sent to the udm for handle autn ue ctx request"<<endl;)
+	TRACE(cout<<"amf_handleautn: Packet received from udm for handle autn ue ctx request :: " << jsonRes <<endl;)
 
 	xres = jsonRes["xres"].asUInt64();
 
@@ -339,7 +338,7 @@ void Amf::handle_security_mode_cmd(int conn_fd, Packet pkt, int worker_id) {
 		cout << "amf_handlesecuritymodecmd: Response received from UDM parsing failed" << endl;
 	}
 
-	TRACE(cout<<"amf_handlesecuritymodecmd: Packet sent to udm for the packet security mode cmd"<<endl;)
+	TRACE(cout<<"amf_handlesecuritymodecmd: Packet received from udm for the packet security mode cmd :: " << jsonRes <<endl;)
 
 	ksi_asme = jsonRes["ksi_asme"].asUInt64();
 	nw_capability = jsonRes["nw_capability"].asUInt();
@@ -431,7 +430,7 @@ bool Amf::handle_security_mode_complete(int conn_fd, Packet pkt, int worker_id) 
 		cout << "amf_handlesecuritymodecomplete: Response received from UDM parsing failed" << endl;
 	}
 
-	TRACE(cout<<"amf_handlesecuritymodecomplete: Packet sent to udm for the packet security mode complete"<<endl;)
+	TRACE(cout<<"amf_handlesecuritymodecomplete: Packet received from udm for the packet security mode complete :: " << jsonRes <<endl;)
 	// g_sync.mlock(uectx_mux);
 	// k_nas_enc = ue_ctx[guti].k_nas_enc;
 	// k_nas_int = ue_ctx[guti].k_nas_int;
@@ -490,7 +489,7 @@ void Amf::handle_location_update(Packet pkt, int worker_id) {
 		cout << "amf_handlelocationupdate: Response received from UDM parsing failed" << endl;
 	}
 
-	TRACE(cout<<"amf_handlelocationupdate: Packet sent to udm for the location update"<<endl;)
+	TRACE(cout<<"amf_handlelocationupdate: Packet received from udm for the location update :: " << jsonRes <<endl;)
 
 	imsi = jsonRes["imsi"].asUInt64();
 	
@@ -500,7 +499,7 @@ void Amf::handle_location_update(Packet pkt, int worker_id) {
 	reqPkt["mmei"] = touint(amf_ids.amfi);
 
 	parsingSuccessful = send_and_receive(
-		g_udm_ip_addr,
+		g_ausf_ip_addr,
 		AUSF_AMF_PORT_START_RANGE + worker_id,
 		"/Nausf_UEAuthentication/LocationUpdate",
 		reqPkt, jsonRes
@@ -579,7 +578,7 @@ void Amf::handle_create_session(int conn_fd, Packet pkt, int worker_id) {
 		cout << "amf_createsession: Response received from UDM parsing failed" << endl;
 	}
 
-	TRACE(cout << "amf_createsession:" << "Packet sent to UDM for creating session" << endl;)
+	TRACE(cout << "amf_createsession:" << "Packet receieved from UDM for creating session :: " << jsonRes << endl;)
 
 	s11_cteid_amf = jsonRes["s11_cteid_amf"].asUInt();
 	imsi = jsonRes["imsi"].asUInt64();
@@ -605,7 +604,7 @@ void Amf::handle_create_session(int conn_fd, Packet pkt, int worker_id) {
 		requestPkt, jsonRes
 	);
 
-	TRACE(cout << "amf_createsession :: Received from SMF : " << jsonRes.asString() << endl;)
+	TRACE(cout << "amf_createsession :: Received from SMF : " << jsonRes << endl;)
 	TRACE(cout << "amf_createsession:" << " create session response received smf: " << guti << endl;)
 
 	//TODO handle respone errors
@@ -892,7 +891,7 @@ void Amf::handle_modify_bearer(Packet pkt, int worker_id) {
 		requestPkt, jsonRes
 	);
 
-	TRACE(cout << "amf_handlemodifybearer :: Received from SMF : " << jsonRes.asString() << endl;)
+	TRACE(cout << "amf_handlemodifybearer :: Received from SMF : " << jsonRes << endl;)
 	TRACE(cout << "amf_handlemodifybearer:" << " modify bearer response received from smf: " << guti << endl;)
 
 
@@ -1156,7 +1155,7 @@ void Amf::handle_detach(int conn_fd, Packet pkt, int worker_id) {
 	requestPkt.clear();
 	jsonRes.clear();
 	requestPkt["guti"] = touint64(guti);
-	requestPkt["eps_bearer_id"] = touint64(eps_bearer_id);
+	requestPkt["eps_bearer_id"] = touint(eps_bearer_id);
 	requestPkt["tai"] = touint64(tai);
 
 	parsingSuccessful = send_and_receive(
@@ -1166,7 +1165,7 @@ void Amf::handle_detach(int conn_fd, Packet pkt, int worker_id) {
 		requestPkt, jsonRes
 	);
 
-	TRACE(cout << "amf_handledetach :: Received from SMF : " << jsonRes.asString() << endl;)
+	TRACE(cout << "amf_handledetach :: Received from SMF : " << jsonRes << endl;)
 	TRACE(cout << "amf_handledetach:" << " detach response received from smf: " << guti << endl;)
 
 	// TODO handle respone errors
@@ -1215,8 +1214,8 @@ void Amf::set_upf_info(uint64_t guti, int worker_id) {
 
 	Json::Value requestPkt, jsonRes;
 	requestPkt["guti"] = touint64(guti);
-	requestPkt["g_upf_smf_port"] = toint(g_upf_smf_port);
-	requestPkt["g_upf_smf_ip_addr"] = g_upf_smf_ip_addr;
+	requestPkt["upf_smf_port"] = toint(g_upf_smf_port);
+	requestPkt["upf_smf_ip_addr"] = g_upf_smf_ip_addr;
 
 	send_and_receive(
 		g_udm_ip_addr,
