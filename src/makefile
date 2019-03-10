@@ -74,7 +74,7 @@ ran_simulator.o:	diameter.h gtp.h network.h packet.h ran.h ran_simulator.cpp ran
 	$(G++) -c -o ran_simulator.o ran_simulator.cpp
 
 rest_utils.o: rest_utils.h rest_utils.cpp
-	$(G++) -c -o rest_utils.o rest_utils.cpp
+	$(G++) -c -o rest_utils.o rest_utils.cpp utils.o
 
 s1ap.o:	s1ap.cpp s1ap.h utils.h
 	$(G++) -c -o s1ap.o s1ap.cpp

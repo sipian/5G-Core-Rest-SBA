@@ -71,26 +71,24 @@ void handle(std::string route, http2 &server, void (*callback)(const response &r
     server.handle(route, [callback, route](const request &req, const response &res) {
 
         req.on_data([callback, &res, route](const uint8_t *data, size_t len) {
+            if(len <= 0) return;
+            
             std::string res_string = "";
             assign_data(data, len, res_string);
             
             // TODO: WARNING - CHANGE IT TO CONSUME AFTER ALL CHUNKS ARE RECEIVED.
             TRACE(cout<<"udm :: "<< route <<" :: " << res_string << " is being received" << endl;)
-            TRACE(cout<<"udm :: "<< route <<" :: PLACE 1" << endl;)
             Json::Value root;
             Json::Reader reader;
             if(!reader.parse(res_string, root)) {
-                TRACE(cout<<"udm :: "<< route <<" :: PLACE 2" << endl;)
                 res.write_head(400);
                 res.end();
                 TRACE(cout<<"udm :: "<< route <<" :: JSON Parsing unsuccessful" << endl;)
                 return;
             }
-            TRACE(cout<<"udm :: "<< route <<" :: PLACE 3" << endl;)
 
             callback(res, root);
 
-            TRACE(cout<<"udm :: "<< route <<" :: PLACE 4" << endl;)
         });
 
         // TODO: look for it's replacement. Not available for this server::req object.

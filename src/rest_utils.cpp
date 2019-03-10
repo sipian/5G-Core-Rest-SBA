@@ -1,4 +1,5 @@
 #include "rest_utils.h"
+#include "utils.h"
 #include <string>
 #include <iostream>
 #include <jsoncpp/json/json.h>
@@ -34,15 +35,16 @@ bool send_and_receive(std::string ip_addr, int port, std::string route, Json::Va
 	sess.on_connect([&sess, &ip_addr, port, &route, &jsonPkt, &jsonResponsePkt, &sess_failed](boost::asio::ip::tcp::resolver::iterator endpoint_it) {
 		boost::system::error_code ec;
 		std::string uri = "http://" + ip_addr + ":" + std::to_string(port) + route;
+		TRACE(cout << "Sending " << jsonPkt << " to " << uri << endl;)
 		auto req = sess.submit(ec, "POST", uri, jsonPkt);
 
-		req->on_response([&jsonPkt, &uri, &jsonResponsePkt, &sess, &sess_failed](const response &res) {
+		req->on_response([&uri, &jsonResponsePkt, &sess, &sess_failed](const response &res) {
 			// TODO handle response errors
 			if(res.status_code() != 200) {
                 sess_failed = true;
 				std::cout << "Error Status Code Received from " << uri << " : " << res.status_code() << std::endl;
 			}
-			res.on_data([&jsonPkt, &jsonResponsePkt, &sess](const uint8_t *data, std::size_t len) {
+			res.on_data([&jsonResponsePkt, &sess](const uint8_t *data, std::size_t len) {
 				if (len > 0) {
 					const char *s = "";
 					s = reinterpret_cast<const char *>(data);

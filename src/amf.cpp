@@ -202,7 +202,7 @@ void Amf::handle_initial_attach(int conn_fd, Packet pkt, int worker_id) {
 		cout << "amf_handleinitialattach: Response received from AUSF parsing failed" << endl;
 	}
 
-	TRACE(cout << "amf_handleinitialattach :: Received from : " << endl;)
+	TRACE(cout << "amf_handleinitialattach :: Received from : " << jsonRes << endl;)
 	TRACE(cout << "amf_handleinitialattach :: " << " request sent to ausf: " << guti << endl;)
 	
 	// TODO: have isMember check?
