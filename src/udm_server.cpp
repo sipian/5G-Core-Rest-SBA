@@ -33,12 +33,13 @@ void init(char *argv[]){
 void run() {
     int i;
     g_udm.handle_mysql_conn();
-    TRACE(cout<<"Udm server started"<<endl;)
 
 	/* SGW S11 server */
+    g_udm_server_threads.resize(g_workers_count);
 	for (int i = 0; i < g_workers_count; i++) {
 		g_udm_server_threads[i] = std::thread(handle_udm, i);
 	}	
+    TRACE(cout<<"Udm server started"<<endl;)
 
 	/* Joining all threads */
 	for (int i = 0; i < g_workers_count; i++) {
@@ -46,7 +47,6 @@ void run() {
 			g_udm_server_threads[i].join();
 		}
 	}
-
 }
 
 void append_data(const uint8_t *data, size_t len, std::string &res_string) {
@@ -60,22 +60,25 @@ void append_data(const uint8_t *data, size_t len, std::string &res_string) {
 }
 
 void handle(std::string route, http2 &server, void callback(const response &res, Json::Value &jsonVal)) {
-    server.handle(route, [&callback, &route](const request &req, const response &res) {
-        std::string res_string = "";
+    server.handle(route, [callback, route](const request &req, const response &res) {
 
-        req.on_data([&res_string, &callback, &res, &route](const uint8_t *data, size_t len) {
+        req.on_data([callback, &res, &route](const uint8_t *data, size_t len) {
+            std::string res_string = "";
             append_data(data, len, res_string);
             
             // TODO: WARNING - CHANGE IT TO CONSUME AFTER ALL CHUNKS ARE RECEIVED.
-            TRACE(cout<<"udm :: "<< route <<" :: " << res_string << " is being received" << endl;)
+            TRACE(cout<<"udm :: "<< route.c_str() <<" :: " << res_string << " is being received" << endl;)
+            TRACE(cout<<"udm :: "<< route.c_str() <<" :: PLACE 1" << endl;)
             Json::Value root;
             Json::Reader reader;
             if(!reader.parse(res_string, root)) {
+                TRACE(cout<<"udm :: "<< route.c_str() <<" :: PLACE 2" << endl;)
                 res.write_head(400);
                 res.end();
-                TRACE(cout<<"udm :: "<< route <<" :: JSON Parsing unsuccessful" << endl;)
+                TRACE(cout<<"udm :: "<< route.c_str() <<" :: JSON Parsing unsuccessful" << endl;)
                 return;
             }
+            TRACE(cout<<"udm :: "<< route.c_str() <<" :: PLACE 3" << endl;)
 
             callback(res, root);
         });
@@ -228,7 +231,7 @@ void handle_udm(int worker_id) {
             cerr << "error: " << ec.message() << endl;
         }
 	} catch (exception &e) {
-		cerr << "UDM server :: exception :: " << e.what() << "\n";
+		cerr << "UDM server ("<< worker_id <<") :: exception :: " << e.what() << "\n";
 	}
 
 }

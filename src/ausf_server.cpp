@@ -123,6 +123,12 @@ void run() {
 		rest_servers[i] = thread(rest_server,i);
 	
 	TRACE(cout<<"REST Server started" << endl;)
+
+	for (int i = 0; i < g_workers_count; i++) {
+		if (rest_servers[i].joinable()) {
+			rest_servers[i].join();
+		}
+	}
 }
 
 void finish() {

@@ -7,7 +7,7 @@ all:	ransim.out sink.out upf.out ausf.out smf.out amf.out udm.out
 
 #-----------------Compiler------------------#
 
-G++ = g++ -std=c++0x -std=c++11 -std=gnu++0x -ggdb -pthread -ljsoncpp -lnghttp2_asio -lboost_system -lcrypto -lssl
+G++ = g++ -std=c++0x -std=c++11 -std=gnu++0x -ggdb -pthread -ljsoncpp -lnghttp2_asio -lboost_system -lcrypto -lssl -g
 
 #-------------------------------------------#
 
