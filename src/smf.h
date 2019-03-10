@@ -166,9 +166,9 @@ public:
 	UdpServer amf_server;
 	
 	Smf();
-	void handle_create_session(CreateSMContextRequestPacket&, CreateSMContextResponsPacket&, UdpClient&, SctpClient&);
-	void handle_modify_bearer(UpdateSMContextRequestPacket&, UpdateSMContextResponsePacket&, UdpClient&, SctpClient&);
-	void handle_detach(ReleaseSMContextRequestPacket&, ReleaseSMContextResponsePacket&, UdpClient&, SctpClient&);
+	void handle_create_session(CreateSMContextRequestPacket&, CreateSMContextResponsPacket&, UdpClient&, int);
+	void handle_modify_bearer(UpdateSMContextRequestPacket&, UpdateSMContextResponsePacket&, UdpClient&, int);
+	void handle_detach(ReleaseSMContextRequestPacket&, ReleaseSMContextResponsePacket&, UdpClient&, int);
 	~Smf();
 };
 #endif

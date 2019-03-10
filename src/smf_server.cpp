@@ -216,7 +216,7 @@ void handle_s11_traffic(int worker_id) {
 					CreateSMContextRequestPacket requestPkt;
 					CreateSMContextResponsPacket responsePkt;
 					createSMContextRequestPayload(requestPkt, root);
-					g_smf.handle_create_session(requestPkt, responsePkt, upf_client, udm_client);
+					g_smf.handle_create_session(requestPkt, responsePkt, upf_client, worker_id);
 					Json::Value json_response;
 					createSMContextResponsePayload(responsePkt, json_response);
 					Json::FastWriter fastWriter;
@@ -254,7 +254,7 @@ void handle_s11_traffic(int worker_id) {
 					UpdateSMContextRequestPacket requestPkt;
 					UpdateSMContextResponsePacket responsePkt;
 					updateSMContextRequestPayload(requestPkt, root);
-					g_smf.handle_modify_bearer(requestPkt, responsePkt, upf_client, udm_client);
+					g_smf.handle_modify_bearer(requestPkt, responsePkt, upf_client, worker_id);
 					Json::Value json_response;
 					updateSMContextResponsePayload(responsePkt, json_response);
 					Json::FastWriter fastWriter;
@@ -291,7 +291,7 @@ void handle_s11_traffic(int worker_id) {
 					ReleaseSMContextRequestPacket requestPkt;
 					ReleaseSMContextResponsePacket responsePkt;
 					releaseSMContextRequestPayload(requestPkt, root);
-					g_smf.handle_detach(requestPkt, responsePkt, upf_client, udm_client);
+					g_smf.handle_detach(requestPkt, responsePkt, upf_client, worker_id);
 					Json::Value json_response;
 					releaseSMContextResponsePayload(responsePkt, json_response);
 					Json::FastWriter fastWriter;
