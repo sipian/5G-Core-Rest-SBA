@@ -204,7 +204,7 @@ void Smf::handle_create_session(CreateSMContextRequestPacket &requestPkt, Create
 	reqPkt["s1_uteid_ul"] = to_string(s1_uteid_ul);
 	reqPkt["g_timer"] = to_string(g_timer);
 
-	bool parsingSuccessful = send_and_receive(
+	parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
 		UDM_PORT_START_RANGE + worker_id,
 		"/Nudm_UECM/19",

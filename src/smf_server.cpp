@@ -182,17 +182,15 @@ void releaseSMContextResponsePayload(ReleaseSMContextResponsePacket &responsePkt
 
 void handle_s11_traffic(int worker_id) {
 	UdpClient upf_client;
-	SctpClient udm_client;
 
 	string smf_ausf_port = to_string(SMF_AMF_PORT_START_RANGE + worker_id);
 	upf_client.set_client(smf_upf_ip_addr);
-	udm_client.conn(g_udm_ip_addr, g_udm_port);
 
 	http2 server;
 	try {
 
-			server.handle("/Nsmf_PDUSession/CreateSMContext", [&worker_id, &upf_client, &udm_client](const request &req, const response &res) {
-				req.on_data([&worker_id, &upf_client, &udm_client, &res](const uint8_t *data, size_t len) {
+			server.handle("/Nsmf_PDUSession/CreateSMContext", [&worker_id, &upf_client](const request &req, const response &res) {
+				req.on_data([&worker_id, &upf_client, &res](const uint8_t *data, size_t len) {
 					if(len <= 0) {
 						return;
 					}
@@ -228,9 +226,9 @@ void handle_s11_traffic(int worker_id) {
 				});
 			});
 
-			server.handle("/Nsmf_PDUSession/UpdateSMContext", [&worker_id, &upf_client, &udm_client](const request &req, const response &res) {
+			server.handle("/Nsmf_PDUSession/UpdateSMContext", [&worker_id, &upf_client](const request &req, const response &res) {
 
-				req.on_data([&worker_id, &upf_client, &udm_client, &res](const uint8_t *data, size_t len) {
+				req.on_data([&worker_id, &upf_client, &res](const uint8_t *data, size_t len) {
 					if(len <= 0) {
 						return;
 					}
@@ -265,9 +263,9 @@ void handle_s11_traffic(int worker_id) {
 				});
 			});
 
-			server.handle("/Nsmf_PDUSession/ReleaseSMContext", [&worker_id, &upf_client, &udm_client](const request &req, const response &res) {
+			server.handle("/Nsmf_PDUSession/ReleaseSMContext", [&worker_id, &upf_client](const request &req, const response &res) {
 
-				req.on_data([&worker_id, &upf_client, &udm_client, &res](const uint8_t *data, size_t len) {
+				req.on_data([&worker_id, &upf_client, &res](const uint8_t *data, size_t len) {
 					if(len <= 0) {
 						return;
 					}

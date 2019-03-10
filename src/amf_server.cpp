@@ -4,7 +4,6 @@ Amf g_amf;
 int g_workers_count;
 vector<SctpClient> ausf_clients;
 vector<UdpClient> smf_clients;
-vector<SctpClient> udm_clients;
 
 void check_usage(int argc) {
 	if (argc < 2) {
@@ -17,7 +16,6 @@ void init(char *argv[]) {
 	g_workers_count = atoi(argv[1]);
 	ausf_clients.resize(g_workers_count);
 	smf_clients.resize(g_workers_count);
-	udm_clients.resize(g_workers_count);
 	signal(SIGPIPE, SIG_IGN);
 }
 
@@ -29,7 +27,6 @@ void run() {
 	for (i = 0; i < g_workers_count; i++) {
 		ausf_clients[i].conn(g_ausf_ip_addr, g_ausf_port);	
 		smf_clients[i].conn(g_amf_ip_addr, smf_amf_ip_addr, smf_amf_port);
-		udm_clients[i].conn(g_udm_ip_addr, g_udm_port);
 	}
 	
 	g_amf.server.run(g_amf_ip_addr, g_amf_port, g_workers_count, handle_ue);
