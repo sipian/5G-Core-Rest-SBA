@@ -167,12 +167,12 @@ void Amf::handle_initial_attach(int conn_fd, Packet pkt, int worker_id) {
 
 
 	Json::Value requestPkt, jsonRes;
-	requestPkt["guti"] = to_string(guti);
-	requestPkt["imsi"] = to_string(imsi);
-	requestPkt["enodeb_s1ap_ue_id"] = to_string(enodeb_s1ap_ue_id);
-	requestPkt["mme_s1ap_ue_id"] = to_string(mme_s1ap_ue_id);
-	requestPkt["tai"] = to_string(tai);
-	requestPkt["nw_capability"] = to_string(nw_capability);
+	requestPkt["imsi"] = touint64(imsi);
+	requestPkt["guti"] = touint64(guti);
+	requestPkt["tai"] = touint64(tai);
+	requestPkt["enodeb_s1ap_ue_id"] = touint(enodeb_s1ap_ue_id);
+	requestPkt["mme_s1ap_ue_id"] = touint(mme_s1ap_ue_id);
+	requestPkt["nw_capability"] = touint(nw_capability);
 
 	send_and_receive(
 		g_udm_ip_addr,
@@ -186,10 +186,10 @@ void Amf::handle_initial_attach(int conn_fd, Packet pkt, int worker_id) {
 	
 	requestPkt.clear();
 	jsonRes.clear();
-	requestPkt["imsi"] = to_string(imsi);
-	requestPkt["plmn_id"] = to_string(amf_ids.plmn_id);
-	requestPkt["num_autn_vectors"] = to_string(num_autn_vectors);
-	requestPkt["nw_type"] = to_string(nw_type);
+	requestPkt["imsi"] = touint64(imsi);
+	requestPkt["num_autn_vectors"] = touint64(num_autn_vectors);
+	requestPkt["plmn_id"] = touint(amf_ids.plmn_id);
+	requestPkt["nw_type"] = touint(nw_type);
 	bool parsingSuccessful = send_and_receive(
 		g_ausf_ip_addr, 
 		AUSF_AMF_PORT_START_RANGE + worker_id, 
@@ -222,9 +222,9 @@ void Amf::handle_initial_attach(int conn_fd, Packet pkt, int worker_id) {
 
 	requestPkt.clear();
 	jsonRes.clear();
-	requestPkt["guti"] = to_string(guti);
-	requestPkt["xres"] = to_string(xres);
-	requestPkt["k_asme"] = to_string(k_asme);
+	requestPkt["guti"] = touint64(guti);
+	requestPkt["xres"] = touint64(xres);
+	requestPkt["k_asme"] = touint64(k_asme);
 	requestPkt["ksi_asme"] = "1";
 	send_and_receive(
 		g_ausf_ip_addr, 
@@ -264,7 +264,7 @@ bool Amf::handle_autn(int conn_fd, Packet pkt, int worker_id) {
 	pkt.clear_pkt();
 
 	Json::Value reqPkt, jsonRes;
-	reqPkt["guti"] = to_string(guti);
+	reqPkt["guti"] = touint64(guti);
 
 	bool parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
@@ -325,7 +325,7 @@ void Amf::handle_security_mode_cmd(int conn_fd, Packet pkt, int worker_id) {
 	pkt.clear_pkt();
 
 	Json::Value reqPkt, jsonRes;
-	reqPkt["guti"] = to_string(guti);
+	reqPkt["guti"] = touint64(guti);
 
 	bool parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
@@ -374,7 +374,7 @@ void Amf::set_crypt_context(uint64_t guti, int worker_id) {
 
 
 	Json::Value reqPkt, jsonRes;
-	reqPkt["guti"] = to_string(guti);
+	reqPkt["guti"] = touint64(guti);
 
 	send_and_receive(
 		g_udm_ip_addr,
@@ -388,7 +388,7 @@ void Amf::set_crypt_context(uint64_t guti, int worker_id) {
 
 void Amf::set_integrity_context(uint64_t guti, int worker_id) {
 	Json::Value reqPkt, jsonRes;
-	reqPkt["guti"] = to_string(guti);
+	reqPkt["guti"] = touint64(guti);
 
 	send_and_receive(
 		g_udm_ip_addr,
@@ -417,7 +417,7 @@ bool Amf::handle_security_mode_complete(int conn_fd, Packet pkt, int worker_id) 
 	}
 
 	Json::Value reqPkt, jsonRes;
-	reqPkt["guti"] = to_string(guti);
+	reqPkt["guti"] = touint64(guti);
 
 	bool parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
@@ -476,7 +476,7 @@ void Amf::handle_location_update(Packet pkt, int worker_id) {
 	// imsi = ue_ctx[guti].imsi;
 	// g_sync.munlock(uectx_mux);
 	Json::Value reqPkt, jsonRes;
-	reqPkt["guti"] = to_string(guti);
+	reqPkt["guti"] = touint64(guti);
 
 	bool parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
@@ -496,8 +496,8 @@ void Amf::handle_location_update(Packet pkt, int worker_id) {
 	
 	reqPkt.clear();
 	jsonRes.clear();
-	reqPkt["imsi"] = to_string(imsi);
-	reqPkt["mmei"] = to_string(amf_ids.amfi);
+	reqPkt["imsi"] = touint64(imsi);
+	reqPkt["mmei"] = touint(amf_ids.amfi);
 
 	parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
@@ -563,9 +563,9 @@ void Amf::handle_create_session(int conn_fd, Packet pkt, int worker_id) {
 	pkt.clear_pkt();
 
 	Json::Value requestPkt, jsonRes;
-	requestPkt["guti"] = to_string(guti);
-	requestPkt["s11_cteid_amf"] = to_string(get_s11cteidamf(guti));
-	requestPkt["eps_bearer_id"] = to_string(eps_bearer_id);
+	requestPkt["guti"] = touint64(guti);
+	requestPkt["s11_cteid_amf"] = touint(get_s11cteidamf(guti));
+	requestPkt["eps_bearer_id"] = touint(eps_bearer_id);
 
 	bool parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
@@ -591,12 +591,12 @@ void Amf::handle_create_session(int conn_fd, Packet pkt, int worker_id) {
 
 	requestPkt.clear();
 	jsonRes.clear();
-	requestPkt["guti"] = to_string(guti);
-	requestPkt["imsi"] = to_string(imsi);
-	requestPkt["s11_cteid_mme"] = to_string(s11_cteid_amf);
-	requestPkt["eps_bearer_id"] = to_string(eps_bearer_id);
-	requestPkt["apn_in_use"] = to_string(apn_in_use);
-	requestPkt["tai"] = to_string(tai);
+	requestPkt["guti"] = touint64(guti);
+	requestPkt["imsi"] = touint64(imsi);
+	requestPkt["s11_cteid_mme"] = touint(s11_cteid_amf);
+	requestPkt["eps_bearer_id"] = touint(eps_bearer_id);
+	requestPkt["apn_in_use"] = touint64(apn_in_use);
+	requestPkt["tai"] = touint64(tai);
 
 	parsingSuccessful = send_and_receive(
 		smf_amf_ip_addr, 
@@ -697,11 +697,11 @@ void Amf::handle_create_session(int conn_fd, Packet pkt, int worker_id) {
 
 	requestPkt.clear();
 	jsonRes.clear();
-	requestPkt["guti"] = to_string(guti);
+	requestPkt["guti"] = touint64(guti);
 	requestPkt["ue_ip_addr"] = ue_ip_addr;
-	requestPkt["s11_cteid_upf"] = to_string(s11_cteid_upf);
-	requestPkt["s1_uteid_ul"] = to_string(s1_uteid_ul);
-	requestPkt["tau_timer"] = to_string(tau_timer);
+	requestPkt["s11_cteid_upf"] = touint(s11_cteid_upf);
+	requestPkt["s1_uteid_ul"] = touint(s1_uteid_ul);
+	requestPkt["tau_timer"] = touint64(tau_timer);
 
 	parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
@@ -780,7 +780,7 @@ void Amf::handle_attach_complete(Packet pkt, int worker_id) {
 	//
 
 	Json::Value requestPkt, jsonRes;
-	requestPkt["guti"] = to_string(guti);
+	requestPkt["guti"] = touint64(guti);
 
 	bool parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
@@ -820,8 +820,8 @@ void Amf::handle_attach_complete(Packet pkt, int worker_id) {
 
 	requestPkt.clear();
 	jsonRes.clear();
-	requestPkt["guti"] = to_string(guti);
-	requestPkt["s1_uteid_dl"] = to_string(s1_uteid_dl);
+	requestPkt["guti"] = touint64(guti);
+	requestPkt["s1_uteid_dl"] = touint(s1_uteid_dl);
 
 	send_and_receive(
 		g_udm_ip_addr,
@@ -857,7 +857,7 @@ void Amf::handle_modify_bearer(Packet pkt, int worker_id) {
 
 
 	Json::Value requestPkt, jsonRes;
-	requestPkt["guti"] = to_string(guti);
+	requestPkt["guti"] = touint64(guti);
 
 	bool parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
@@ -879,11 +879,11 @@ void Amf::handle_modify_bearer(Packet pkt, int worker_id) {
 
 	requestPkt.clear();
 	jsonRes.clear();
-	requestPkt["guti"] = to_string(guti);
-	requestPkt["s1_uteid_dl"] = to_string(s1_uteid_dl);
-	requestPkt["eps_bearer_id"] = to_string(eps_bearer_id);
+	requestPkt["guti"] = touint64(guti);
+	requestPkt["s1_uteid_dl"] = touint(s1_uteid_dl);
+	requestPkt["eps_bearer_id"] = touint(eps_bearer_id);
 	requestPkt["g_trafmon_ip_addr"] = g_trafmon_ip_addr;
-	requestPkt["g_trafmon_port"] = to_string(g_trafmon_port);
+	requestPkt["g_trafmon_port"] = toint(g_trafmon_port);
 
 	parsingSuccessful = send_and_receive(
 		smf_amf_ip_addr, 
@@ -1113,7 +1113,7 @@ void Amf::handle_detach(int conn_fd, Packet pkt, int worker_id) {
 	//
 
 	Json::Value requestPkt, jsonRes;
-	requestPkt["guti"] = to_string(guti);
+	requestPkt["guti"] = touint64(guti);
 
 	bool parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
@@ -1155,9 +1155,9 @@ void Amf::handle_detach(int conn_fd, Packet pkt, int worker_id) {
 
 	requestPkt.clear();
 	jsonRes.clear();
-	requestPkt["guti"] = to_string(guti);
-	requestPkt["eps_bearer_id"] = to_string(eps_bearer_id);
-	requestPkt["tai"] = to_string(tai);
+	requestPkt["guti"] = touint64(guti);
+	requestPkt["eps_bearer_id"] = touint64(eps_bearer_id);
+	requestPkt["tai"] = touint64(tai);
 
 	parsingSuccessful = send_and_receive(
 		smf_amf_ip_addr, 
@@ -1214,8 +1214,8 @@ void Amf::set_upf_info(uint64_t guti, int worker_id) {
 
 
 	Json::Value requestPkt, jsonRes;
-	requestPkt["guti"] = to_string(guti);
-	requestPkt["g_upf_smf_port"] = to_string(g_upf_smf_port);
+	requestPkt["guti"] = touint64(guti);
+	requestPkt["g_upf_smf_port"] = toint(g_upf_smf_port);
 	requestPkt["g_upf_smf_ip_addr"] = g_upf_smf_ip_addr;
 
 	send_and_receive(

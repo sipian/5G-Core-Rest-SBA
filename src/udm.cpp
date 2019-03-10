@@ -1,5 +1,6 @@
 #include "udm.h"
 #include "discover.h"
+#include "rest_utils.h"
 using namespace std;
 using namespace std::chrono;
 
@@ -113,8 +114,8 @@ std::string Udm::get_autn_info(Json::Value &jsonPkt) {
     // TRACE(cout<<"udm_get_autn_info: "<<"response sent to ausf"<<endl;)
 	Json::Value resJsonPkt;
 	Json::FastWriter fastWriter;
-	resJsonPkt["key"] = std::to_string(key);
-	resJsonPkt["rand_num"] = std::to_string(rand_num);
+	resJsonPkt["key"] = touint64(key);
+	resJsonPkt["rand_num"] = touint64(rand_num);
 	return fastWriter.write(resJsonPkt);
 }
 
@@ -186,7 +187,7 @@ std::string Udm::handle_autn_ue_ctx_request(Json::Value &jsonPkt) {
 	// TRACE(cout<<"sent the handle autn request to the amf"<<endl;)
 	Json::Value resJsonPkt;
 	Json::FastWriter fastWriter;
-	resJsonPkt["xres"] = std::to_string(xres);
+	resJsonPkt["xres"] = touint64(xres);
 	return fastWriter.write(resJsonPkt);
 }
 
@@ -197,12 +198,12 @@ std::string Udm::ue_ctx_request_security_mode_cmd(Json::Value &jsonPkt) {
 	Json::FastWriter fastWriter;
 	g_sync.mlock(uectx_mux);
 
-	resJsonPkt["ksi_asme"] = std::to_string(ue_ctx[guti].ksi_asme);
-	resJsonPkt["nw_capability"] = std::to_string(ue_ctx[guti].nw_capability);
-	resJsonPkt["nas_enc_algo"] = std::to_string(ue_ctx[guti].nas_enc_algo);
-	resJsonPkt["nas_int_algo"] = std::to_string(ue_ctx[guti].nas_int_algo);
-	resJsonPkt["k_nas_enc"] = std::to_string(ue_ctx[guti].k_nas_enc);
-	resJsonPkt["k_nas_int"] = std::to_string(ue_ctx[guti].k_nas_int);
+	resJsonPkt["ksi_asme"] = touint64(ue_ctx[guti].ksi_asme);
+	resJsonPkt["nw_capability"] = touint(ue_ctx[guti].nw_capability);
+	resJsonPkt["nas_enc_algo"] = touint64(ue_ctx[guti].nas_enc_algo);
+	resJsonPkt["nas_int_algo"] = touint64(ue_ctx[guti].nas_int_algo);
+	resJsonPkt["k_nas_enc"] = touint64(ue_ctx[guti].k_nas_enc);
+	resJsonPkt["k_nas_int"] = touint64(ue_ctx[guti].k_nas_int);
 
 	g_sync.munlock(uectx_mux);
 
@@ -245,8 +246,8 @@ std::string Udm::ue_ctx_request_handle_security_mode_complete(Json::Value &jsonP
 	
 	Json::Value resJsonPkt;
 	Json::FastWriter fastWriter;
-	resJsonPkt["k_nas_enc"] = std::to_string(k_nas_enc);
-	resJsonPkt["k_nas_int"] = std::to_string(k_nas_int);
+	resJsonPkt["k_nas_enc"] = touint64(k_nas_enc);
+	resJsonPkt["k_nas_int"] = touint64(k_nas_int);
 	return fastWriter.write(resJsonPkt);
 	// TRACE(cout<<"Packet sent to amf for handle_security_complete"<<endl;)
 }
@@ -262,7 +263,7 @@ std::string Udm::ue_ctx_request_handle_location_update(Json::Value &jsonPkt) {
 
 	Json::Value resJsonPkt;
 	Json::FastWriter fastWriter;
-	resJsonPkt["imsi"] = std::to_string(imsi);
+	resJsonPkt["imsi"] = touint64(imsi);
 	return fastWriter.write(resJsonPkt);
 }
 
@@ -277,13 +278,13 @@ std::string Udm::ue_ctx_request_handle_create_session(Json::Value &jsonPkt) {
 	ue_ctx[guti].s11_cteid_amf = s11_cteid_amf;
 	ue_ctx[guti].eps_bearer_id = eps_bearer_id;
 
-	resJsonPkt["s11_cteid_amf"] = std::to_string(ue_ctx[guti].s11_cteid_amf);
-	resJsonPkt["imsi"] = std::to_string(ue_ctx[guti].imsi);
-	resJsonPkt["eps_bearer_id"] = std::to_string(ue_ctx[guti].eps_bearer_id);
+	resJsonPkt["s11_cteid_amf"] = touint(ue_ctx[guti].s11_cteid_amf);
+	resJsonPkt["imsi"] = touint64(ue_ctx[guti].imsi);
+	resJsonPkt["eps_bearer_id"] = touint(ue_ctx[guti].eps_bearer_id);
 	resJsonPkt["upf_smf_ip_addr"] = ue_ctx[guti].upf_smf_ip_addr;
-	resJsonPkt["upf_smf_port"] = std::to_string(ue_ctx[guti].upf_smf_port);
-	resJsonPkt["apn_in_use"] = std::to_string(ue_ctx[guti].apn_in_use);
-	resJsonPkt["tai"] = std::to_string(ue_ctx[guti].tai);
+	resJsonPkt["upf_smf_port"] = toint(ue_ctx[guti].upf_smf_port);
+	resJsonPkt["apn_in_use"] = touint64(ue_ctx[guti].apn_in_use);
+	resJsonPkt["tai"] = touint64(ue_ctx[guti].tai);
 
 	g_sync.munlock(uectx_mux);
 	
@@ -310,16 +311,16 @@ std::string Udm::ue_ctx_update_handle_craete_session(Json::Value &jsonPkt) {
 	Json::Value resJsonPkt;
 	Json::FastWriter fastWriter;
 
-	resJsonPkt["e_rab_id"] = std::to_string(ue_ctx[guti].e_rab_id);
-	resJsonPkt["k_enodeb"] = std::to_string(ue_ctx[guti].k_enodeb);
-	resJsonPkt["nw_capability"] = std::to_string(ue_ctx[guti].nw_capability);
+	resJsonPkt["e_rab_id"] = touint(ue_ctx[guti].e_rab_id);
+	resJsonPkt["k_enodeb"] = touint64(ue_ctx[guti].k_enodeb);
+	resJsonPkt["nw_capability"] = touint(ue_ctx[guti].nw_capability);
 
 	resJsonPkt["tai_list"] = Json::arrayValue;
-	resJsonPkt["tai_list"].append(std::to_string(ue_ctx[guti].tai_list[0]));
+	resJsonPkt["tai_list"].append(touint64(ue_ctx[guti].tai_list[0]));
 	
-	resJsonPkt["tau_timer"] = std::to_string(ue_ctx[guti].tau_timer);
-	resJsonPkt["k_nas_enc"] = std::to_string(ue_ctx[guti].k_nas_enc);
-	resJsonPkt["k_nas_int"] = std::to_string(ue_ctx[guti].k_nas_int);
+	resJsonPkt["tau_timer"] = touint64(ue_ctx[guti].tau_timer);
+	resJsonPkt["k_nas_enc"] = touint64(ue_ctx[guti].k_nas_enc);
+	resJsonPkt["k_nas_int"] = touint64(ue_ctx[guti].k_nas_int);
 
 	return fastWriter.write(resJsonPkt);
 	// TRACE(cout<<"UE CTX update handle create session has sent to AMF"<<endl;)
@@ -338,8 +339,8 @@ std::string Udm::ue_ctx_request_handle_attach_complete(Json::Value &jsonPkt) {
 
 	g_sync.mlock(uectx_mux);
 
-	resJsonPkt["k_nas_enc"] = std::to_string(ue_ctx[guti].k_nas_enc);
-	resJsonPkt["k_nas_int"] = std::to_string(ue_ctx[guti].k_nas_int);
+	resJsonPkt["k_nas_enc"] = touint64(ue_ctx[guti].k_nas_enc);
+	resJsonPkt["k_nas_int"] = touint64(ue_ctx[guti].k_nas_int);
 
 	g_sync.munlock(uectx_mux);
 
@@ -367,9 +368,9 @@ std::string Udm::ue_ctx_request_handle_modify_bearer(Json::Value &jsonPkt) {
 	g_sync.mlock(uectx_mux);
 
 	ue_ctx[guti].ecm_state = 1;
-	resJsonPkt["eps_bearer_id"] = std::to_string(ue_ctx[guti].eps_bearer_id);
-	resJsonPkt["s1_uteid_dl"] = std::to_string(ue_ctx[guti].s1_uteid_dl);
-	resJsonPkt["s11_cteid_upf"] = std::to_string(ue_ctx[guti].s11_cteid_upf);
+	resJsonPkt["eps_bearer_id"] = touint(ue_ctx[guti].eps_bearer_id);
+	resJsonPkt["s1_uteid_dl"] = touint(ue_ctx[guti].s1_uteid_dl);
+	resJsonPkt["s11_cteid_upf"] = touint(ue_ctx[guti].s11_cteid_upf);
 
 	g_sync.munlock(uectx_mux);
 
@@ -385,11 +386,11 @@ std::string Udm::ue_ctx_request_handle_detach(Json::Value &jsonPkt) {
 
 	g_sync.mlock(uectx_mux);
 
-	resJsonPkt["k_nas_enc"] = std::to_string(ue_ctx[guti].k_nas_enc);
-	resJsonPkt["k_nas_int"] = std::to_string(ue_ctx[guti].k_nas_int);
-	resJsonPkt["eps_bearer_id"] = std::to_string(ue_ctx[guti].eps_bearer_id);
-	resJsonPkt["tai"] = std::to_string(ue_ctx[guti].tai);
-	resJsonPkt["s11_cteid_upf"] = std::to_string(ue_ctx[guti].s11_cteid_upf);
+	resJsonPkt["k_nas_enc"] = touint64(ue_ctx[guti].k_nas_enc);
+	resJsonPkt["k_nas_int"] = touint64(ue_ctx[guti].k_nas_int);
+	resJsonPkt["eps_bearer_id"] = touint(ue_ctx[guti].eps_bearer_id);
+	resJsonPkt["tai"] = touint64(ue_ctx[guti].tai);
+	resJsonPkt["s11_cteid_upf"] = touint(ue_ctx[guti].s11_cteid_upf);
 	
 	g_sync.munlock(uectx_mux);
 
@@ -420,11 +421,11 @@ std::string Udm::ue_ctx_request_smf_handle_create_session(Json::Value &jsonPkt) 
 	ue_ctx[guti].apn_in_use = jsonPkt["apn_in_use"].asUInt64();
 	ue_ctx[guti].tai = jsonPkt["tai"].asUInt64();
 
-	resJsonPkt["s11_cteid_mme"] = std::to_string(ue_ctx[guti].s11_cteid_mme);
-	resJsonPkt["eps_bearer_id"] = std::to_string(ue_ctx[guti].eps_bearer_id);
-	resJsonPkt["imsi"] = std::to_string(ue_ctx[guti].imsi);
-	resJsonPkt["apn_in_use"] = std::to_string(ue_ctx[guti].apn_in_use);
-	resJsonPkt["tai"] = std::to_string(ue_ctx[guti].tai);
+	resJsonPkt["s11_cteid_mme"] = touint(ue_ctx[guti].s11_cteid_mme);
+	resJsonPkt["eps_bearer_id"] = touint(ue_ctx[guti].eps_bearer_id);
+	resJsonPkt["imsi"] = touint64(ue_ctx[guti].imsi);
+	resJsonPkt["apn_in_use"] = touint64(ue_ctx[guti].apn_in_use);
+	resJsonPkt["tai"] = touint64(ue_ctx[guti].tai);
 
 	g_sync.munlock(uectx_mux);
 	
@@ -449,15 +450,15 @@ std::string Udm::ue_ctx_update_smf_handle_create_session(Json::Value &jsonPkt) {
 	ue_ctx[guti].tau_timer = jsonPkt["tau_timer"].asUInt64();
 	ue_ctx[guti].e_rab_id = ue_ctx[guti].eps_bearer_id;
 
-	resJsonPkt["e_rab_id"] = std::to_string(ue_ctx[guti].e_rab_id);
-	resJsonPkt["k_enodeb"] = std::to_string(ue_ctx[guti].k_enodeb);
+	resJsonPkt["e_rab_id"] = touint(ue_ctx[guti].e_rab_id);
+	resJsonPkt["k_enodeb"] = touint64(ue_ctx[guti].k_enodeb);
 
 	resJsonPkt["tai_list"] = Json::arrayValue;
 	for(auto val: ue_ctx[guti].tai_list) {
-		resJsonPkt["tai_list"].append(std::to_string(val));
+		resJsonPkt["tai_list"].append(touint64(val));
 	}
 
-	resJsonPkt["tau_timer"] = std::to_string(ue_ctx[guti].tau_timer);
+	resJsonPkt["tau_timer"] = touint64(ue_ctx[guti].tau_timer);
 
 	g_sync.munlock(uectx_mux);
 
@@ -471,9 +472,9 @@ std::string Udm::ue_ctx_request_smf_handle_modify_bearer(Json::Value &jsonPkt) {
 	Json::Value resJsonPkt;
 	Json::FastWriter fastWriter;
 
-	resJsonPkt["eps_bearer_id"] = std::to_string(ue_ctx[guti].eps_bearer_id);
-	resJsonPkt["s1_uteid_dl"] = std::to_string(ue_ctx[guti].s1_uteid_dl);
-	resJsonPkt["s11_cteid_sgw"] = std::to_string(ue_ctx[guti].s11_cteid_sgw);
+	resJsonPkt["eps_bearer_id"] = touint(ue_ctx[guti].eps_bearer_id);
+	resJsonPkt["s1_uteid_dl"] = touint(ue_ctx[guti].s1_uteid_dl);
+	resJsonPkt["s11_cteid_sgw"] = touint(ue_ctx[guti].s11_cteid_sgw);
 
 	return fastWriter.write(resJsonPkt);
 	// TRACE(cout<<"Response sent to request smf handle modify bearer"<<endl;)
@@ -485,7 +486,7 @@ std::string Udm::ue_ctx_request_smf_handle_detach(Json::Value &jsonPkt) {
 	Json::Value resJsonPkt;
 	Json::FastWriter fastWriter;
 
-	resJsonPkt["s11_cteid_sgw"] = std::to_string(ue_ctx[guti].s11_cteid_sgw);
+	resJsonPkt["s11_cteid_sgw"] = touint(ue_ctx[guti].s11_cteid_sgw);
 
 	return fastWriter.write(resJsonPkt);
 	// TRACE(cout<<"Response sent to request from handle detach"<<endl;)

@@ -134,12 +134,12 @@ void Smf::handle_create_session(CreateSMContextRequestPacket &requestPkt, Create
 	// tai = ue_ctx[guti].tai;
 
 	Json::Value reqPkt, jsonRes;
-	reqPkt["guti"] = to_string(guti);
-	reqPkt["s11_cteid_mme"] = to_string(s11_cteid_mme);
-	reqPkt["eps_bearer_id"] = to_string(eps_bearer_id);
-	reqPkt["imsi"] = to_string(imsi);
-	reqPkt["apn_in_use"] = to_string(apn_in_use);
-	reqPkt["tai"] = to_string(tai);
+	reqPkt["guti"] = touint64(guti);
+	reqPkt["s11_cteid_mme"] = touint(s11_cteid_mme);
+	reqPkt["eps_bearer_id"] = touint(eps_bearer_id);
+	reqPkt["imsi"] = touint64(imsi);
+	reqPkt["apn_in_use"] = touint64(apn_in_use);
+	reqPkt["tai"] = touint64(tai);
 
 	bool parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
@@ -198,11 +198,11 @@ void Smf::handle_create_session(CreateSMContextRequestPacket &requestPkt, Create
 
 	reqPkt.clear();
 	jsonRes.clear();
-	reqPkt["guti"] = to_string(guti);
+	reqPkt["guti"] = touint64(guti);
 	reqPkt["ue_ip_addr"] = ue_ip_addr;
-	reqPkt["s11_cteid_sgw"] = to_string(s11_cteid_sgw);
-	reqPkt["s1_uteid_ul"] = to_string(s1_uteid_ul);
-	reqPkt["g_timer"] = to_string(g_timer);
+	reqPkt["s11_cteid_sgw"] = touint(s11_cteid_sgw);
+	reqPkt["s1_uteid_ul"] = touint(s1_uteid_ul);
+	reqPkt["g_timer"] = touint64(g_timer);
 
 	parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
@@ -269,7 +269,7 @@ void Smf::handle_modify_bearer(UpdateSMContextRequestPacket &requestPkt, UpdateS
 	upf_client.set_server(g_upf_smf_ip_addr, g_upf_smf_port);
 
 	Json::Value reqPkt, jsonRes;
-	reqPkt["guti"] = to_string(guti);
+	reqPkt["guti"] = touint64(guti);
 
 	bool parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
@@ -335,7 +335,7 @@ void Smf::handle_detach(ReleaseSMContextRequestPacket &requestPkt, ReleaseSMCont
 	//
 
 	Json::Value reqPkt, jsonRes;
-	reqPkt["guti"] = to_string(guti);
+	reqPkt["guti"] = touint64(guti);
 
 	bool parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,

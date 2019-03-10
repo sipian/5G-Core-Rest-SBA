@@ -42,7 +42,7 @@ std::string Ausf::handle_autninfo_req(Json::Value &jsonPkt, int worker_id) {
 	nw_type = jsonPkt["nw_type"].asUInt64();
 
 	Json::Value reqPkt, jsonRes;
-	reqPkt["imsi"] = to_string(imsi);
+	reqPkt["imsi"] = touint64(imsi);
 
 	bool parsingSuccessful = send_and_receive(
 		g_udm_ip_addr, 
@@ -61,10 +61,10 @@ std::string Ausf::handle_autninfo_req(Json::Value &jsonPkt, int worker_id) {
 	k_asme = ck + ik + sqn + plmn_id;
 
 	jsonRes.clear();
-	jsonRes["autn_num"] = to_string(autn_num);
-	jsonRes["rand_num"] = to_string(rand_num);
-	jsonRes["xres"] = to_string(xres);
-	jsonRes["k_asme"] = to_string(k_asme);
+	jsonRes["autn_num"] = touint64(autn_num);
+	jsonRes["rand_num"] = touint64(rand_num);
+	jsonRes["xres"] = touint64(xres);
+	jsonRes["k_asme"] = touint64(k_asme);
 
 	std::cout<<"requestPkt.autn_num is (ausf.cpp) "<< autn_num << endl;
 
@@ -84,8 +84,8 @@ std::string Ausf::handle_location_update(Json::Value &jsonPkt, int worker_id) {
 	TRACE(cout<<"Sending out the packet to the udm"<<endl;)
 
 	Json::Value reqPkt, jsonRes;
-	reqPkt["imsi"] = to_string(imsi);
-	reqPkt["mmei"] = to_string(mmei);
+	reqPkt["imsi"] = touint64(imsi);
+	reqPkt["mmei"] = touint(mmei);
 
 	// Ignore return value when we dont expect any return in jsonRes.
 	send_and_receive(
@@ -99,7 +99,7 @@ std::string Ausf::handle_location_update(Json::Value &jsonPkt, int worker_id) {
 	TRACE(cout << "ausf_handleautoinforeq:" << " loc updated" << endl;)
 
 	jsonRes.clear();
-	jsonRes["default_apn"] = to_string(default_apn);
+	jsonRes["default_apn"] = touint64(default_apn);
 	TRACE(cout << "ausf_handleautoinforeq:" << " loc update complete sent to amf" << endl;)
 
 	Json::FastWriter fastWriter;

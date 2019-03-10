@@ -168,7 +168,7 @@ SINK_R = $(G++) -o sink.out $(SINK_P) -pthread -lnghttp2_asio -ljsoncpp -lboost_
 UPF_P = diameter.o gtp.o network.o packet.o upf.o upf_server.o s1ap.o sync.o udp_client.o udp_server.o utils.o
 UPF_R = $(G++) -o upf.out $(UPF_P) -pthread -lnghttp2_asio -lboost_system -ljsoncpp -lcrypto -lssl
 
-UDM_P = diameter.o gtp.o udm.o udm_server.o mysql.o network.o packet.o s1ap.o sctp_server.o sctp_client.o sync.o utils.o
+UDM_P = diameter.o gtp.o udm.o udm_server.o mysql.o network.o packet.o s1ap.o sctp_server.o sctp_client.o sync.o utils.o rest_utils.o
 UDM_R = $(G++) -o udm.out $(UDM_P) -pthread `mysql_config --cflags --libs` -lcrypto -ljsoncpp -lnghttp2_asio -lboost_system -lcrypto -lssl
 
 #-------------------------------------------#

@@ -59,12 +59,20 @@ void append_data(const uint8_t *data, size_t len, std::string &res_string) {
     }
 }
 
+void assign_data(const uint8_t *data, size_t len, std::string &res_string) {
+    if (len > 0) {
+        const char *s = "";
+        s = reinterpret_cast<const char *>(data);
+        res_string.assign(s,len);
+    }
+}
+
 void handle(std::string route, http2 &server, void callback(const response &res, Json::Value &jsonVal)) {
     server.handle(route, [callback, route](const request &req, const response &res) {
 
-        req.on_data([callback, &res, &route](const uint8_t *data, size_t len) {
+        req.on_data([callback, &res, route](const uint8_t *data, size_t len) {
             std::string res_string = "";
-            append_data(data, len, res_string);
+            assign_data(data, len, res_string);
             
             // TODO: WARNING - CHANGE IT TO CONSUME AFTER ALL CHUNKS ARE RECEIVED.
             TRACE(cout<<"udm :: "<< route.c_str() <<" :: " << res_string << " is being received" << endl;)
