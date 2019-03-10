@@ -342,7 +342,7 @@ void Amf::handle_security_mode_cmd(int conn_fd, Packet pkt, int worker_id) {
 	TRACE(cout<<"amf_handlesecuritymodecmd: Packet sent to udm for the packet security mode cmd"<<endl;)
 
 	ksi_asme = jsonRes["ksi_asme"].asUInt64();
-	nw_capability = jsonRes["nw_capability"].asUInt64();
+	nw_capability = jsonRes["nw_capability"].asUInt();
 	nas_enc_algo = jsonRes["nas_enc_algo"].asUInt64();
 	nas_int_algo = jsonRes["nas_int_algo"].asUInt64();
 	k_nas_enc = jsonRes["k_nas_enc"].asUInt64();
@@ -1129,7 +1129,7 @@ void Amf::handle_detach(int conn_fd, Packet pkt, UdpClient &smf_client, int work
 	k_nas_int = jsonRes["k_nas_int"].asUInt64();
 	eps_bearer_id = jsonRes["eps_bearer_id"].asUInt();
 	tai = jsonRes["tai"].asUInt64();
-	s11_cteid_upf = jsonRes["k_nas_enc"].asUInt();
+	s11_cteid_upf = jsonRes["s11_cteid_upf"].asUInt();
 
 	TRACE(cout << "amf_handledetach:" << " detach req received: " << pkt.len << ": " << guti << endl;)
 

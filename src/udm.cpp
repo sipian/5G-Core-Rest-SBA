@@ -441,7 +441,7 @@ std::string Udm::ue_ctx_update_smf_handle_create_session(Json::Value &jsonPkt) {
 
 	g_sync.mlock(uectx_mux);
 
-	ue_ctx[guti].ip_addr = jsonPkt["ip_addr"].asString();
+	ue_ctx[guti].ip_addr = jsonPkt["ue_ip_addr"].asString();
 	ue_ctx[guti].s11_cteid_sgw = jsonPkt["s11_cteid_sgw"].asUInt();
 	ue_ctx[guti].s1_uteid_ul = jsonPkt["s1_uteid_ul"].asUInt();
 
