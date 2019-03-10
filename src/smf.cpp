@@ -153,7 +153,6 @@ void Smf::handle_create_session(CreateSMContextRequestPacket &requestPkt, Create
 		cout << "smf_createsession: ERROR : Failed to parse JSON from response received from UDM." << endl;
 	}
 
-
 	TRACE(cout<<"UE CTX request for updation sent to udm"<<endl;)
 
 	s11_cteid_mme = jsonRes["s11_cteid_mme"].asUInt();

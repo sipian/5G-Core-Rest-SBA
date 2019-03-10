@@ -494,18 +494,20 @@ void Amf::handle_location_update(Packet pkt, SctpClient &ausf_client, int worker
 
 	imsi = jsonRes["imsi"].asUInt64();
 	
-	pkt.clear_pkt();
-	pkt.append_item(imsi);
-	pkt.append_item(amf_ids.amfi);
-	pkt.prepend_diameter_hdr(2, pkt.len);
-	ausf_client.snd(pkt);
-	TRACE(cout << "amf_handlelocationupdate:" << " loc update sent to ausf: " << guti << endl;)
+	reqPkt.clear();
+	jsonRes.clear();
+	reqPkt["imsi"] = to_string(imsi);
+	reqPkt["mmei"] = to_string(amf_ids.amfi);
 
-	ausf_client.rcv(pkt);
+	parsingSuccessful = send_and_receive(
+		g_udm_ip_addr,
+		AUSF_AMF_PORT_START_RANGE + worker_id,
+		"/Nausf_UELocationUpdate",
+		reqPkt, jsonRes
+	);
 	TRACE(cout << "amf_handlelocationupdate:" << " loc update response received from ausf: " << guti << endl;)
 
-	pkt.extract_diameter_hdr();
-	pkt.extract_item(default_apn);
+	default_apn = jsonRes["default_apn"].asUInt64();
 	g_sync.mlock(uectx_mux);
 	ue_ctx[guti].default_apn = default_apn;
 	ue_ctx[guti].apn_in_use = ue_ctx[guti].default_apn;

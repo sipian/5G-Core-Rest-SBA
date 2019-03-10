@@ -152,7 +152,7 @@ void handle_s11_traffic(int worker_id) {
 					Json::Reader reader;
 					bool parsingSuccessful = reader.parse(str,root);
 
-					if(parsingSuccessful == false) {
+					if(!parsingSuccessful) {
 						res.write_head(400);
 						res.end();
 						cout << "smfserver_handle_s11_traffic :: Nsmf_PDUSession :: CreateSMContext :: JSON Parsing unsuccessful" << endl;
@@ -190,7 +190,7 @@ void handle_s11_traffic(int worker_id) {
 					Json::Reader reader;
 					bool parsingSuccessful = reader.parse(str,root);
 
-					if(parsingSuccessful == false) {
+					if(!parsingSuccessful) {
 						res.write_head(400);
 						res.end();
 						cout << "smfserver_handle_s11_traffic :: Nsmf_PDUSession :: UpdateSMContext :: JSON Parsing unsuccessful" << endl;
@@ -227,7 +227,7 @@ void handle_s11_traffic(int worker_id) {
 					Json::Reader reader;
 					bool parsingSuccessful = reader.parse(str,root);
 
-					if(parsingSuccessful == false) {
+					if(!parsingSuccessful) {
 						res.write_head(400);
 						res.end();
 						cout << "smfserver_handle_s11_traffic :: Nsmf_PDUSession :: ReleaseSMContext :: JSON Parsing unsuccessful" << endl;
