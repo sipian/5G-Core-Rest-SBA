@@ -184,7 +184,7 @@ void Amf::handle_initial_attach(int conn_fd, Packet pkt, int worker_id) {
 	send_and_receive(
 		g_udm_ip_addr,
 		UDM_PORT_START_RANGE + worker_id,
-		"/Nudm_UECM/3",
+		"/Nudm_UECM/UpdateInitialAttachInit",
 		requestPkt, jsonRes
 	);
 
@@ -235,7 +235,7 @@ void Amf::handle_initial_attach(int conn_fd, Packet pkt, int worker_id) {
 	send_and_receive(
 		g_udm_ip_addr,
 		UDM_PORT_START_RANGE + worker_id,
-		"/Nudm_UECM/4",
+		"/Nudm_UECM/UpdateInitialAttach",
 		requestPkt, jsonRes
 	);
 
@@ -275,7 +275,7 @@ bool Amf::handle_autn(int conn_fd, Packet pkt, int worker_id) {
 	bool parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
 		UDM_PORT_START_RANGE + worker_id,
-		"/Nudm_UECM/5",
+		"/Nudm_UECM/UECtx/SetAuth",
 		reqPkt, jsonRes
 	);
 
@@ -336,7 +336,7 @@ void Amf::handle_security_mode_cmd(int conn_fd, Packet pkt, int worker_id) {
 	bool parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
 		UDM_PORT_START_RANGE + worker_id,
-		"/Nudm_UECM/6",
+		"/Nudm_UECM/UECtx/SetSecurityCmd",
 		reqPkt, jsonRes
 	);
 
@@ -385,7 +385,7 @@ void Amf::set_crypt_context(uint64_t guti, int worker_id) {
 	send_and_receive(
 		g_udm_ip_addr,
 		UDM_PORT_START_RANGE + worker_id,
-		"/Nudm_UECM/7",
+		"/Nudm_UECM/UECtx/SetCrypt",
 		reqPkt, jsonRes
 	);
 
@@ -399,7 +399,7 @@ void Amf::set_integrity_context(uint64_t guti, int worker_id) {
 	send_and_receive(
 		g_udm_ip_addr,
 		UDM_PORT_START_RANGE + worker_id,
-		"/Nudm_UECM/8",
+		"/Nudm_UECM/UECtx/SetIntegrity",
 		reqPkt, jsonRes
 	);
 
@@ -428,7 +428,7 @@ bool Amf::handle_security_mode_complete(int conn_fd, Packet pkt, int worker_id) 
 	bool parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
 		UDM_PORT_START_RANGE + worker_id,
-		"/Nudm_UECM/9",
+		"/Nudm_UECM/UECtx/HandleSecurityMode",
 		reqPkt, jsonRes
 	);
 
@@ -487,7 +487,7 @@ void Amf::handle_location_update(Packet pkt, int worker_id) {
 	bool parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
 		UDM_PORT_START_RANGE + worker_id,
-		"/Nudm_UECM/10",
+		"/Nudm_UECM/UECtx/HandleLocationUpdate",
 		reqPkt, jsonRes
 	);
 
@@ -576,7 +576,7 @@ void Amf::handle_create_session(int conn_fd, Packet pkt, int worker_id) {
 	bool parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
 		UDM_PORT_START_RANGE + worker_id,
-		"/Nudm_UECM/11",
+		"/Nudm_UECM/UECtx/HandleCreateSessionBegin",
 		requestPkt, jsonRes
 	);
 
@@ -712,7 +712,7 @@ void Amf::handle_create_session(int conn_fd, Packet pkt, int worker_id) {
 	parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
 		UDM_PORT_START_RANGE + worker_id,
-		"/Nudm_UECM/12",
+		"/Nudm_UECM/UECtx/HandleCreateSessionEnd",
 		requestPkt, jsonRes
 	);
 
@@ -791,7 +791,7 @@ void Amf::handle_attach_complete(Packet pkt, int worker_id) {
 	bool parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
 		UDM_PORT_START_RANGE + worker_id,
-		"/Nudm_UECM/13",
+		"/Nudm_UECM/UECtx/HandleAttachComplete",
 		requestPkt, jsonRes
 	);
 
@@ -832,7 +832,7 @@ void Amf::handle_attach_complete(Packet pkt, int worker_id) {
 	send_and_receive(
 		g_udm_ip_addr,
 		UDM_PORT_START_RANGE + worker_id,
-		"/Nudm_UECM/14",
+		"/Nudm_UECM/UECtx/UpdateAttachComplete",
 		requestPkt, jsonRes
 	);
 
@@ -868,7 +868,7 @@ void Amf::handle_modify_bearer(Packet pkt, int worker_id) {
 	bool parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
 		UDM_PORT_START_RANGE + worker_id,
-		"/Nudm_UECM/15",
+		"/Nudm_UECM/UECtx/HandleModifyBearer",
 		requestPkt, jsonRes
 	);
 
@@ -1124,7 +1124,7 @@ void Amf::handle_detach(int conn_fd, Packet pkt, int worker_id) {
 	bool parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
 		UDM_PORT_START_RANGE + worker_id,
-		"/Nudm_UECM/16",
+		"/Nudm_UECM/UECtx/HandleDetach",
 		requestPkt, jsonRes
 	);
 
@@ -1227,7 +1227,7 @@ void Amf::set_upf_info(uint64_t guti, int worker_id) {
 	send_and_receive(
 		g_udm_ip_addr,
 		UDM_PORT_START_RANGE + worker_id,
-		"/Nudm_UECM/17",
+		"/Nudm_UECM/UECtx/SetUPFInfo",
 		requestPkt, jsonRes
 	);
 }

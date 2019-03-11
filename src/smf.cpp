@@ -152,7 +152,7 @@ void Smf::handle_create_session(CreateSMContextRequestPacket &requestPkt, Create
 	bool parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
 		UDM_PORT_START_RANGE + worker_id,
-		"/Nudm_UECM/18",
+		"/Nudm_UECM/UECtx/RequestSMFCreateSession",
 		reqPkt, jsonRes
 	);
 
@@ -215,7 +215,7 @@ void Smf::handle_create_session(CreateSMContextRequestPacket &requestPkt, Create
 	parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
 		UDM_PORT_START_RANGE + worker_id,
-		"/Nudm_UECM/19",
+		"/Nudm_UECM/UECtx/UpdateSMFCreateSession",
 		reqPkt, jsonRes
 	);
 
@@ -282,7 +282,7 @@ void Smf::handle_modify_bearer(UpdateSMContextRequestPacket &requestPkt, UpdateS
 	bool parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
 		UDM_PORT_START_RANGE + worker_id,
-		"/Nudm_UECM/20",
+		"/Nudm_UECM/UECtx/RequestSMFModifyBearer",
 		reqPkt, jsonRes
 	);
 
@@ -348,7 +348,7 @@ void Smf::handle_detach(ReleaseSMContextRequestPacket &requestPkt, ReleaseSMCont
 	bool parsingSuccessful = send_and_receive(
 		g_udm_ip_addr,
 		UDM_PORT_START_RANGE + worker_id,
-		"/Nudm_UECM/21",
+		"/Nudm_UECM/UECtx/RequestSMFDetach",
 		reqPkt, jsonRes
 	);
 
