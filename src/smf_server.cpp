@@ -1,4 +1,5 @@
 #include "smf_server.h"
+#include "rest_utils.h"
 #include <nghttp2/asio_http2_server.h>
 #include <jsoncpp/json/json.h>
 
@@ -40,160 +41,105 @@ void run() {
 }
 
 void createSMContextRequestPayload(CreateSMContextRequestPacket& request, Json::Value &root) {
-	istringstream iss;
-	string pktField_string;
-
 	if(root.isMember("guti")) {
-		iss.clear();
-		pktField_string = root["guti"].asString();
-		iss.str(pktField_string);
-		iss >> request.guti;
+		request.guti = root["guti"].asUInt64();
 	}
 
 	if(root.isMember("imsi")) {
-		iss.clear();
-		pktField_string = root["imsi"].asString();
-		iss.str(pktField_string);
-		iss >> request.imsi;
+		request.imsi = root["imsi"].asUInt64();
 	}
 
 	if(root.isMember("s11_cteid_mme")) {
-		iss.clear();
-		pktField_string = root["s11_cteid_mme"].asString();
-		iss.str(pktField_string);
-		iss >> request.s11_cteid_mme;
+		request.s11_cteid_mme = root["s11_cteid_mme"].asUInt();
 	}
 
 	if(root.isMember("eps_bearer_id")) {
-		iss.clear();
-		pktField_string = root["eps_bearer_id"].asString();
-		iss.str(pktField_string);
-		iss >> request.eps_bearer_id;
+		request.eps_bearer_id = root["eps_bearer_id"].asUInt();
 	}
 
 	if(root.isMember("apn_in_use")) {
-		iss.clear();
-		pktField_string = root["apn_in_use"].asString();
-		iss.str(pktField_string);
-		iss >> request.apn_in_use;
+		request.apn_in_use = root["apn_in_use"].asUInt64();
 	}
 
 	if(root.isMember("tai")) {
-		iss.clear();
-		pktField_string = root["tai"].asString();
-		iss.str(pktField_string);
-		iss >> request.tai;
+		request.tai = root["tai"].asUInt64();
 	}
 }
 
 void createSMContextResponsePayload(CreateSMContextResponsPacket &responsePkt, Json::Value &json_response) {
-	json_response["guti"] = to_string(responsePkt.guti);
-	json_response["eps_bearer_id"] = to_string(responsePkt.eps_bearer_id);
-	json_response["e_rab_id"] = to_string(responsePkt.e_rab_id);
-	json_response["s1_uteid_ul"] = to_string(responsePkt.s1_uteid_ul);
-	json_response["s11_cteid_sgw"] = to_string(responsePkt.s11_cteid_sgw);
-	json_response["k_enodeb"] = to_string(responsePkt.k_enodeb);
-	json_response["tai_list_size"] = to_string(responsePkt.tai_list_size);
+	json_response["guti"] = touint64(responsePkt.guti);
+	json_response["eps_bearer_id"] = touint(responsePkt.eps_bearer_id);
+	json_response["e_rab_id"] = touint(responsePkt.e_rab_id);
+	json_response["s1_uteid_ul"] = touint(responsePkt.s1_uteid_ul);
+	json_response["s11_cteid_sgw"] = touint(responsePkt.s11_cteid_sgw);
+	json_response["k_enodeb"] = touint64(responsePkt.k_enodeb);
+	json_response["tai_list_size"] = toint(responsePkt.tai_list_size);
 	json_response["tai_list"] = Json::arrayValue;
 	for(int i = 0; i < responsePkt.tai_list_size; i++) {
-		json_response["tai_list"].append(to_string(responsePkt.tai_list[i]));
+		json_response["tai_list"].append(touint64(responsePkt.tai_list[i]));
 	}
-	json_response["tau_timer"] = to_string(responsePkt.tau_timer);
+	json_response["tau_timer"] = touint64(responsePkt.tau_timer);
 	json_response["ue_ip_addr"] = responsePkt.ue_ip_addr;
 	json_response["upf_s1_ip_addr"] = responsePkt.upf_s1_ip_addr;
-	json_response["upf_s1_port"] = to_string(responsePkt.upf_s1_port);
-	json_response["res"] = to_string(responsePkt.res);
+	json_response["upf_s1_port"] = toint(responsePkt.upf_s1_port);
+	json_response["res"] = tobool(responsePkt.res);
 }
 
 void updateSMContextRequestPayload(UpdateSMContextRequestPacket& request, Json::Value &root) {
-	istringstream iss;
-	string pktField_string;
-
 	if(root.isMember("guti")) {
-		iss.clear();
-		pktField_string = root["guti"].asString();
-		iss.str(pktField_string);
-		iss >> request.guti;
+		request.guti = root["guti"].asUInt64();
 	}
 
 	if(root.isMember("s1_uteid_dl")) {
-		iss.clear();
-		pktField_string = root["s1_uteid_dl"].asString();
-		iss.str(pktField_string);
-		iss >> request.s1_uteid_dl;
+		request.s1_uteid_dl = root["s1_uteid_dl"].asUInt();
 	}
 
 	if(root.isMember("eps_bearer_id")) {
-		iss.clear();
-		pktField_string = root["eps_bearer_id"].asString();
-		iss.str(pktField_string);
-		iss >> request.eps_bearer_id;
+		request.eps_bearer_id = root["eps_bearer_id"].asUInt();
 	}
 
 	if(root.isMember("g_trafmon_ip_addr")) {
-		iss.clear();
-		pktField_string = root["g_trafmon_ip_addr"].asString();
-		iss.str(pktField_string);
-		iss >> request.g_trafmon_ip_addr;
+		request.g_trafmon_ip_addr = root["g_trafmon_ip_addr"].asString();
 	}
 
 	if(root.isMember("g_trafmon_port")) {
-		iss.clear();
-		pktField_string = root["g_trafmon_port"].asString();
-		iss.str(pktField_string);
-		iss >> request.g_trafmon_port;
+		request.g_trafmon_port = root["g_trafmon_port"].asInt();
 	}
 }
 
 void updateSMContextResponsePayload(UpdateSMContextResponsePacket &responsePkt, Json::Value &json_response) {
-	json_response["res"] = to_string(responsePkt.res);
+	json_response["res"] = tobool(responsePkt.res);
 }
 
-
 void releaseSMContextRequestPayload(ReleaseSMContextRequestPacket& request, Json::Value &root) {
-	istringstream iss;
-	string pktField_string;
-
 	if(root.isMember("guti")) {
-		iss.clear();
-		pktField_string = root["guti"].asString();
-		iss.str(pktField_string);
-		iss >> request.guti;
+		request.guti = root["guti"].asUInt64();
 	}
 
 	if(root.isMember("eps_bearer_id")) {
-		iss.clear();
-		pktField_string = root["eps_bearer_id"].asString();
-		iss.str(pktField_string);
-		iss >> request.eps_bearer_id;
+	 	request.eps_bearer_id = root["eps_bearer_id"].asUInt();
 	}
 
 	if(root.isMember("tai")) {
-		iss.clear();
-		pktField_string = root["tai"].asString();
-		iss.str(pktField_string);
-		iss >> request.tai;
+		request.tai = root["tai"].asUInt64();
 	}
 }
 
 void releaseSMContextResponsePayload(ReleaseSMContextResponsePacket &responsePkt, Json::Value &json_response) {
-	json_response["res"] = to_string(responsePkt.res);
+	json_response["res"] = tobool(responsePkt.res);
 }
 
 void handle_s11_traffic(int worker_id) {
 	UdpClient upf_client;
-	SctpClient udm_client;
-	Packet pkt;
 
 	string smf_ausf_port = to_string(SMF_AMF_PORT_START_RANGE + worker_id);
 	upf_client.set_client(smf_upf_ip_addr);
-	udm_client.conn(g_udm_ip_addr, g_udm_port);
 
 	http2 server;
 	try {
 
-			server.handle("/Nsmf_PDUSession/CreateSMContext", [&worker_id, &upf_client, &udm_client](const request &req, const response &res) {
-				req.on_data([&worker_id, &upf_client, &udm_client, &res](const uint8_t *data, size_t len) {
+			server.handle("/Nsmf_PDUSession/CreateSMContext", [&worker_id, &upf_client](const request &req, const response &res) {
+				req.on_data([&worker_id, &upf_client, &res](const uint8_t *data, size_t len) {
 					if(len <= 0) {
 						return;
 					}
@@ -207,7 +153,7 @@ void handle_s11_traffic(int worker_id) {
 					Json::Reader reader;
 					bool parsingSuccessful = reader.parse(str,root);
 
-					if(parsingSuccessful == false) {
+					if(!parsingSuccessful) {
 						res.write_head(400);
 						res.end();
 						cout << "smfserver_handle_s11_traffic :: Nsmf_PDUSession :: CreateSMContext :: JSON Parsing unsuccessful" << endl;
@@ -217,7 +163,7 @@ void handle_s11_traffic(int worker_id) {
 					CreateSMContextRequestPacket requestPkt;
 					CreateSMContextResponsPacket responsePkt;
 					createSMContextRequestPayload(requestPkt, root);
-					g_smf.handle_create_session(requestPkt, responsePkt, upf_client, udm_client);
+					g_smf.handle_create_session(requestPkt, responsePkt, upf_client, worker_id);
 					Json::Value json_response;
 					createSMContextResponsePayload(responsePkt, json_response);
 					Json::FastWriter fastWriter;
@@ -229,9 +175,9 @@ void handle_s11_traffic(int worker_id) {
 				});
 			});
 
-			server.handle("/Nsmf_PDUSession/UpdateSMContext", [&worker_id, &upf_client, &udm_client](const request &req, const response &res) {
+			server.handle("/Nsmf_PDUSession/UpdateSMContext", [&worker_id, &upf_client](const request &req, const response &res) {
 
-				req.on_data([&worker_id, &upf_client, &udm_client, &res](const uint8_t *data, size_t len) {
+				req.on_data([&worker_id, &upf_client, &res](const uint8_t *data, size_t len) {
 					if(len <= 0) {
 						return;
 					}
@@ -245,7 +191,7 @@ void handle_s11_traffic(int worker_id) {
 					Json::Reader reader;
 					bool parsingSuccessful = reader.parse(str,root);
 
-					if(parsingSuccessful == false) {
+					if(!parsingSuccessful) {
 						res.write_head(400);
 						res.end();
 						cout << "smfserver_handle_s11_traffic :: Nsmf_PDUSession :: UpdateSMContext :: JSON Parsing unsuccessful" << endl;
@@ -255,7 +201,7 @@ void handle_s11_traffic(int worker_id) {
 					UpdateSMContextRequestPacket requestPkt;
 					UpdateSMContextResponsePacket responsePkt;
 					updateSMContextRequestPayload(requestPkt, root);
-					g_smf.handle_modify_bearer(requestPkt, responsePkt, upf_client, udm_client);
+					g_smf.handle_modify_bearer(requestPkt, responsePkt, upf_client, worker_id);
 					Json::Value json_response;
 					updateSMContextResponsePayload(responsePkt, json_response);
 					Json::FastWriter fastWriter;
@@ -266,9 +212,9 @@ void handle_s11_traffic(int worker_id) {
 				});
 			});
 
-			server.handle("/Nsmf_PDUSession/ReleaseSMContext", [&worker_id, &upf_client, &udm_client](const request &req, const response &res) {
+			server.handle("/Nsmf_PDUSession/ReleaseSMContext", [&worker_id, &upf_client](const request &req, const response &res) {
 
-				req.on_data([&worker_id, &upf_client, &udm_client, &res](const uint8_t *data, size_t len) {
+				req.on_data([&worker_id, &upf_client, &res](const uint8_t *data, size_t len) {
 					if(len <= 0) {
 						return;
 					}
@@ -282,7 +228,7 @@ void handle_s11_traffic(int worker_id) {
 					Json::Reader reader;
 					bool parsingSuccessful = reader.parse(str,root);
 
-					if(parsingSuccessful == false) {
+					if(!parsingSuccessful) {
 						res.write_head(400);
 						res.end();
 						cout << "smfserver_handle_s11_traffic :: Nsmf_PDUSession :: ReleaseSMContext :: JSON Parsing unsuccessful" << endl;
@@ -292,7 +238,7 @@ void handle_s11_traffic(int worker_id) {
 					ReleaseSMContextRequestPacket requestPkt;
 					ReleaseSMContextResponsePacket responsePkt;
 					releaseSMContextRequestPayload(requestPkt, root);
-					g_smf.handle_detach(requestPkt, responsePkt, upf_client, udm_client);
+					g_smf.handle_detach(requestPkt, responsePkt, upf_client, worker_id);
 					Json::Value json_response;
 					releaseSMContextResponsePayload(responsePkt, json_response);
 					Json::FastWriter fastWriter;
@@ -304,7 +250,7 @@ void handle_s11_traffic(int worker_id) {
 			});
 
 			boost::system::error_code ec;
-			if (server.listen_and_serve(ec,smf_amf_ip_addr, smf_ausf_port))
+			if (server.listen_and_serve(ec, smf_amf_ip_addr, smf_ausf_port))
 			{
 				cerr << "error: " << ec.message() << endl;
 			}

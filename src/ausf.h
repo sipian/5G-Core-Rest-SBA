@@ -13,26 +13,13 @@
 #include "sctp_server.h"
 #include "sync.h"
 #include "utils.h"
+#include <jsoncpp/json/json.h>
 
 extern string g_ausf_ip_addr;
 extern int g_ausf_port;
 
 extern string g_udm_ip_addr;
 extern int g_udm_port;
-
-struct RestPacket
-{
-	uint64_t imsi;
-	uint64_t plmn_id;
-	uint64_t autn_vector;
-	uint64_t nw_type;
-	uint64_t xres;
-	uint64_t k_asme;
-	uint64_t rand_num;
-	uint64_t autn_num;
-	uint64_t ksi_asme;
-};
-
 
 class Ausf {
 private:
@@ -44,8 +31,8 @@ public:
 
 	Ausf();
 	void handle_mysql_conn();
-	void handle_autninfo_req(RestPacket&, SctpClient&);
-	void handle_location_update(int, Packet&, SctpClient&);
+	std::string handle_autninfo_req(Json::Value &jsonPkt, int);
+	std::string handle_location_update(Json::Value &jsonPkt, int);
 	~Ausf();
 };
 

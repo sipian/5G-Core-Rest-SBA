@@ -112,7 +112,7 @@ void Packet::append_item(const char *ITEM) {
 }
 
 void Packet::append_item(string item) {
-	int item_len = strlen(item.c_str());
+	int item_len = item.length();
 
 	append_item(item_len);
 	append_item(item.c_str());

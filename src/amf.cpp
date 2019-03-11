@@ -1,5 +1,6 @@
 #include "amf.h"
 #include "discover.h"
+#include "rest_utils.h"
 #include <jsoncpp/json/json.h>
 #include <nghttp2/asio_http2_client.h>
 
@@ -131,7 +132,7 @@ uint32_t Amf::get_s11cteidamf(uint64_t guti) {
 	return s11_cteid_amf;
 }
 
-void Amf::handle_initial_attach(int conn_fd, Packet pkt, SctpClient &ausf_client, SctpClient &udm_client, int worker_id) {
+void Amf::handle_initial_attach(int conn_fd, Packet pkt, int worker_id) {
 
 	uint64_t imsi;
 	uint64_t tai;
@@ -171,93 +172,50 @@ void Amf::handle_initial_attach(int conn_fd, Packet pkt, SctpClient &ausf_client
 	// ue_ctx[guti].init(imsi, enodeb_s1ap_ue_id, mme_s1ap_ue_id, tai, nw_capability);
 	// g_sync.munlock(uectx_mux);
 
-	pkt.clear_pkt();
-	pkt.append_item(guti);
-	pkt.append_item(imsi);
-	pkt.append_item(enodeb_s1ap_ue_id);
-	pkt.append_item(mme_s1ap_ue_id);
-	pkt.append_item(tai);
-	pkt.append_item(nw_capability);
-	pkt.prepend_diameter_hdr(3,pkt.len);
-	udm_client.snd(pkt);
+
+	Json::Value requestPkt, jsonRes;
+	requestPkt["imsi"] = touint64(imsi);
+	requestPkt["guti"] = touint64(guti);
+	requestPkt["tai"] = touint64(tai);
+	requestPkt["enodeb_s1ap_ue_id"] = touint(enodeb_s1ap_ue_id);
+	requestPkt["mme_s1ap_ue_id"] = touint(mme_s1ap_ue_id);
+	requestPkt["nw_capability"] = touint(nw_capability);
+
+	send_and_receive(
+		g_udm_ip_addr,
+		UDM_PORT_START_RANGE + worker_id,
+		"/Nudm_UECM/3",
+		requestPkt, jsonRes
+	);
 
 	nw_type = ue_ctx[guti].nw_type;
 	TRACE(cout << "amf_handleinitialattach:" << ":ue entry added: " << guti << endl;)
 	
-	Json::Value requestPkt;
-	requestPkt["imsi"] = to_string(imsi);
-	requestPkt["plmn_id"] = to_string(amf_ids.plmn_id);
-	requestPkt["num_autn_vectors"] = to_string(num_autn_vectors);
-	requestPkt["nw_type"] = to_string(nw_type);
+	requestPkt.clear();
+	jsonRes.clear();
+	requestPkt["imsi"] = touint64(imsi);
+	requestPkt["num_autn_vectors"] = touint64(num_autn_vectors);
+	requestPkt["plmn_id"] = touint(amf_ids.plmn_id);
+	requestPkt["nw_type"] = touint(nw_type);
+	bool parsingSuccessful = send_and_receive(
+		g_ausf_ip_addr, 
+		AUSF_AMF_PORT_START_RANGE + worker_id, 
+		"/Nausf_UEAuthentication/Authenticate",
+		requestPkt, jsonRes
+	);
 
-	Json::FastWriter fastWriter;
-	std::string jsonPkt = fastWriter.write(requestPkt);
-	std::string jsonResponsePkt = "";
+	if(!parsingSuccessful) {
+		// TODO: handle error
+		cout << "amf_handleinitialattach: Response received from AUSF parsing failed" << endl;
+	}
 
-	session sess(io_service, g_ausf_ip_addr, to_string(AUSF_AMF_PORT_START_RANGE + worker_id));
-
-	sess.on_connect([&sess, &worker_id, &jsonPkt, &jsonResponsePkt](tcp::resolver::iterator endpoint_it) {
-		boost::system::error_code ec;
-		string port_id = to_string(AUSF_AMF_PORT_START_RANGE + worker_id);
-		string uri = "http://" + g_ausf_ip_addr + ":" + port_id + "/Nausf_UEAuthentication";
-		TRACE(cout << "amf_handleinitialattach :: Connecting to " << uri << "\n\tPOST Request\n\tPayload: " << jsonPkt << endl;)
-		auto req = sess.submit(ec, "POST", uri, jsonPkt);
-
-		req->on_response([&jsonPkt, &uri, &jsonResponsePkt, &sess](const response &res) {
-			//TODO handle response errors
-			if(res.status_code() != 200) {
-				cout << "amf_handleinitialattach :: Error Status Code Received from " << uri << " : " << res.status_code() << endl;
-			}
-			res.on_data([&jsonPkt, &jsonResponsePkt, &sess](const uint8_t *data, std::size_t len) {
-				if (len > 0)
-				{
-					const char *s = "";
-					s = reinterpret_cast<const char *>(data);
-					// collecting all the data
-					if(len > 0) {
-						jsonResponsePkt.append(s, len);
-					}
-				}
-			});
-		});
-		req->on_close([&jsonResponsePkt, &uri, &sess](uint32_t error_code) {
-			//shutdown session after first request was done.
-			sess.shutdown();
-		});
-	});
-
-	sess.on_error([](const boost::system::error_code &ec) {
-		std::cerr << "error: " << ec.message() << std::endl;
-	});
-
-	io_service.run();
-
-	TRACE(cout << "amf_handleinitialattach :: Received from : " << jsonResponsePkt << endl;)
-	TRACE(cout << "amf_handleinitialattach :: " << " request sent to ausf: " << guti << endl;)
-
-	Json::Value jsonRes;
-	Json::Reader reader;
-
-	bool parsingSuccessful = reader.parse(jsonResponsePkt, jsonRes);
-	std::string autn_string = jsonRes["autn_num"].asString();
-	std::istringstream iss(autn_string);
-	iss >> autn_num;
-	iss.clear();
-
-	std::string rand_string = jsonRes["rand_num"].asString();
-	iss.str(rand_string);
-	iss >> rand_num;
-	iss.clear();
-
-	std::string xres_string = jsonRes["xres"].asString();
-	iss.str(xres_string);
-	iss >> xres;
-	iss.clear();
-
-	std::string kasme_string = jsonRes["k_asme"].asString();
-	iss.str(kasme_string);
-	iss >> k_asme;
-	iss.clear();
+	TRACE(cout << "amf_handleinitialattach :: Received from AUSF : " << jsonRes << endl;)
+	
+	// TODO: have isMember check?
+	autn_num = jsonRes["autn_num"].asUInt64();
+	rand_num = jsonRes["rand_num"].asUInt64();
+	xres = jsonRes["xres"].asUInt64();
+	k_asme = jsonRes["k_asme"].asUInt64();
 
 	// g_sync.mlock(uectx_mux);
 	// ue_ctx[guti].xres = xres;
@@ -267,13 +225,20 @@ void Amf::handle_initial_attach(int conn_fd, Packet pkt, SctpClient &ausf_client
 	// g_sync.munlock(uectx_mux);
 	//
 	// will send the UPDATE request to the udm for updation of ue_context.
-	pkt.clear_pkt();
-	pkt.append_item(guti);
-	pkt.append_item(xres);
-	pkt.append_item(k_asme);
-	pkt.append_item(1);
-	pkt.prepend_diameter_hdr(4,pkt.len);
-	udm_client.snd(pkt);
+
+	requestPkt.clear();
+	jsonRes.clear();
+	requestPkt["guti"] = touint64(guti);
+	requestPkt["xres"] = touint64(xres);
+	requestPkt["k_asme"] = touint64(k_asme);
+	requestPkt["ksi_asme"] = touint64(1);;
+	send_and_receive(
+		g_udm_ip_addr,
+		UDM_PORT_START_RANGE + worker_id,
+		"/Nudm_UECM/4",
+		requestPkt, jsonRes
+	);
+
 
 	// TRACE(cout << "amf_handleinitialattach:" << " autn:" << autn_num <<" rand:" << rand_num << " xres:" << xres << " k_asme:" << k_asme << " " << guti << endl;)
 
@@ -286,7 +251,7 @@ void Amf::handle_initial_attach(int conn_fd, Packet pkt, SctpClient &ausf_client
 	TRACE(cout << "amf_handleinitialattach:" << " autn request sent to ran: " << guti << endl;	)
 }
 
-bool Amf::handle_autn(int conn_fd, Packet pkt, SctpClient &udm_client) {
+bool Amf::handle_autn(int conn_fd, Packet pkt, int worker_id) {
 
 	uint64_t guti;
 	uint64_t res;
@@ -303,13 +268,25 @@ bool Amf::handle_autn(int conn_fd, Packet pkt, SctpClient &udm_client) {
 	// g_sync.munlock(uectx_mux);
 
 	pkt.clear_pkt();
-	pkt.append_item(guti);
-	pkt.prepend_diameter_hdr(5,pkt.len);
-	udm_client.snd(pkt);
-	TRACE(cout<<"Packet sent to the udm for handle autn ue ctx request"<<endl;)
 
-	udm_client.rcv(pkt);
-	pkt.extract_item(xres);
+	Json::Value reqPkt, jsonRes;
+	reqPkt["guti"] = touint64(guti);
+
+	bool parsingSuccessful = send_and_receive(
+		g_udm_ip_addr,
+		UDM_PORT_START_RANGE + worker_id,
+		"/Nudm_UECM/5",
+		reqPkt, jsonRes
+	);
+
+	if(!parsingSuccessful) {
+		// TODO: handle error
+		cout << "amf_handleautn: Response received from UDM parsing failed" << endl;
+	}
+
+	TRACE(cout<<"amf_handleautn: Packet received from udm for handle autn ue ctx request :: " << jsonRes <<endl;)
+
+	xres = jsonRes["xres"].asUInt64();
 
 	if (res == xres) {
 		/* Success */
@@ -323,7 +300,7 @@ bool Amf::handle_autn(int conn_fd, Packet pkt, SctpClient &udm_client) {
 	}
 }
 
-void Amf::handle_security_mode_cmd(int conn_fd, Packet pkt, SctpClient &udm_client) {
+void Amf::handle_security_mode_cmd(int conn_fd, Packet pkt, int worker_id) {
 	uint64_t guti;
 	uint64_t ksi_asme;
 	uint16_t nw_capability;
@@ -337,8 +314,8 @@ void Amf::handle_security_mode_cmd(int conn_fd, Packet pkt, SctpClient &udm_clie
 		TRACE(cout << "amf_handlesecuritymodecmd:" << " zero guti " << pkt.s1ap_hdr.mme_s1ap_ue_id << " " << pkt.len << ": " << guti << endl;		)
 		g_utils.handle_type1_error(-1, "Zero guti: amf_handlesecuritymodecmd");
 	}	
-	set_crypt_context(guti,udm_client);
-	set_integrity_context(guti, udm_client);
+	set_crypt_context(guti, worker_id);
+	set_integrity_context(guti, worker_id);
 
 	// will rather send the request for ue_ctx to the amf
 
@@ -352,19 +329,30 @@ void Amf::handle_security_mode_cmd(int conn_fd, Packet pkt, SctpClient &udm_clie
 	// g_sync.munlock(uectx_mux);
 
 	pkt.clear_pkt();
-	pkt.append_item(guti);
-	pkt.prepend_diameter_hdr(6,pkt.len);
-	udm_client.snd(pkt);
-	TRACE(cout<<"Waiting for the packet security mode cmd"<<endl;)
 
-	udm_client.rcv(pkt);
-	TRACE(cout<<"Packet received from udm"<<endl;)
-	pkt.extract_item(ksi_asme);
-	pkt.extract_item(nw_capability);
-	pkt.extract_item(nas_enc_algo);
-	pkt.extract_item(nas_int_algo);
-	pkt.extract_item(k_nas_enc);
-	pkt.extract_item(k_nas_int);
+	Json::Value reqPkt, jsonRes;
+	reqPkt["guti"] = touint64(guti);
+
+	bool parsingSuccessful = send_and_receive(
+		g_udm_ip_addr,
+		UDM_PORT_START_RANGE + worker_id,
+		"/Nudm_UECM/6",
+		reqPkt, jsonRes
+	);
+
+	if(!parsingSuccessful) {
+		// TODO: handle error
+		cout << "amf_handlesecuritymodecmd: Response received from UDM parsing failed" << endl;
+	}
+
+	TRACE(cout<<"amf_handlesecuritymodecmd: Packet received from udm for the packet security mode cmd :: " << jsonRes <<endl;)
+
+	ksi_asme = jsonRes["ksi_asme"].asUInt64();
+	nw_capability = jsonRes["nw_capability"].asUInt();
+	nas_enc_algo = jsonRes["nas_enc_algo"].asUInt64();
+	nas_int_algo = jsonRes["nas_int_algo"].asUInt64();
+	k_nas_enc = jsonRes["k_nas_enc"].asUInt64();
+	k_nas_int = jsonRes["k_nas_int"].asUInt64();
 
 	// continue with the normal execution
 	pkt.clear_pkt();
@@ -380,27 +368,7 @@ void Amf::handle_security_mode_cmd(int conn_fd, Packet pkt, SctpClient &udm_clie
 	TRACE(cout << "amf_handlesecuritymodecmd:" << " security mode command sent: " << pkt.len << ": " << guti << endl;)
 }
 
-void Amf::set_crypt_context(uint64_t guti,SctpClient &udm_client) {
-	uint64_t imsi;
-	uint64_t tai;
-	uint64_t ksi_asme;
-	uint16_t nw_type;
-	uint16_t nw_capability;
-	uint64_t autn_num;
-	uint64_t rand_num;
-	uint64_t xres;
-	uint64_t k_asme;
-	uint32_t enodeb_s1ap_ue_id;
-	uint32_t mme_s1ap_ue_id;
-	uint64_t num_autn_vectors;
-	uint64_t nas_enc_algo;
-	uint64_t nas_int_algo;
-	uint64_t k_nas_enc;
-	uint64_t k_nas_int;
-	uint64_t count;
-	uint64_t bearer;
-	uint64_t dir;
-
+void Amf::set_crypt_context(uint64_t guti, int worker_id) {
 //
 	// g_sync.mlock(uectx_mux);
 	// ue_ctx[guti].nas_enc_algo = 1;
@@ -410,32 +378,39 @@ void Amf::set_crypt_context(uint64_t guti,SctpClient &udm_client) {
 
 	// will send out the request of UE CTX to the udm
 
-	Packet pkt;
-	pkt.clear_pkt();
-	pkt.append_item(guti);
-	pkt.prepend_diameter_hdr(7,pkt.len);
-	udm_client.snd(pkt);
-	TRACE(cout<<"Packet sent for ue ctx to udm set encrypt context"<<endl;)
 
+	Json::Value reqPkt, jsonRes;
+	reqPkt["guti"] = touint64(guti);
+
+	send_and_receive(
+		g_udm_ip_addr,
+		UDM_PORT_START_RANGE + worker_id,
+		"/Nudm_UECM/7",
+		reqPkt, jsonRes
+	);
+
+	TRACE(cout<<"amf_setcryptcontext: Packet sent for ue ctx to udm set encrypt context"<<endl;)
 }
 
-void Amf::set_integrity_context(uint64_t guti, SctpClient &udm_client) {
-	Packet pkt;
-	pkt.clear_pkt();
-	pkt.append_item(guti);
-	pkt.prepend_diameter_hdr(8,pkt.len);
-	udm_client.snd(pkt);
+void Amf::set_integrity_context(uint64_t guti, int worker_id) {
+	Json::Value reqPkt, jsonRes;
+	reqPkt["guti"] = touint64(guti);
 
-	TRACE(cout<<"packet sent to udm for update set integrity context"<<endl;)
-	//
+	send_and_receive(
+		g_udm_ip_addr,
+		UDM_PORT_START_RANGE + worker_id,
+		"/Nudm_UECM/8",
+		reqPkt, jsonRes
+	);
+
+	TRACE(cout<<"amf_setintegritycontext: packet sent to udm for update set integrity context"<<endl;)
 	g_sync.mlock(uectx_mux);
 	ue_ctx[guti].nas_int_algo = 1;
 	ue_ctx[guti].k_nas_int = ue_ctx[guti].k_asme + ue_ctx[guti].nas_int_algo + ue_ctx[guti].count + ue_ctx[guti].bearer + ue_ctx[guti].dir;
 	g_sync.munlock(uectx_mux);
-	//
 }
 
-bool Amf::handle_security_mode_complete(int conn_fd, Packet pkt, SctpClient &udm_client) {
+bool Amf::handle_security_mode_complete(int conn_fd, Packet pkt, int worker_id) {
 	uint64_t guti;
 	uint64_t k_nas_enc;
 	uint64_t k_nas_int;
@@ -446,24 +421,35 @@ bool Amf::handle_security_mode_complete(int conn_fd, Packet pkt, SctpClient &udm
 		TRACE(cout << "amf_handlesecuritymodecomplete:" << " zero guti " << pkt.s1ap_hdr.mme_s1ap_ue_id << " " << pkt.len << ": " << guti << endl;		)
 		g_utils.handle_type1_error(-1, "Zero guti: amf_handlesecuritymodecomplete");
 	}
-	Packet pkt1;
-	pkt1.clear_pkt();
-	pkt1.append_item(guti);
-	pkt1.prepend_diameter_hdr(9, pkt.len);
-	udm_client.snd(pkt1);	
+
+	Json::Value reqPkt, jsonRes;
+	reqPkt["guti"] = touint64(guti);
+
+	bool parsingSuccessful = send_and_receive(
+		g_udm_ip_addr,
+		UDM_PORT_START_RANGE + worker_id,
+		"/Nudm_UECM/9",
+		reqPkt, jsonRes
+	);
+
+	if(!parsingSuccessful) {
+		// TODO: handle error
+		cout << "amf_handlesecuritymodecomplete: Response received from UDM parsing failed" << endl;
+	}
+
+	TRACE(cout<<"amf_handlesecuritymodecomplete: Packet received from udm for the packet security mode complete :: " << jsonRes <<endl;)
 	// g_sync.mlock(uectx_mux);
 	// k_nas_enc = ue_ctx[guti].k_nas_enc;
 	// k_nas_int = ue_ctx[guti].k_nas_int;
 	// g_sync.munlock(uectx_mux);
-	udm_client.rcv(pkt1);
-	pkt1.extract_item(k_nas_enc);
-	pkt1.extract_item(k_nas_int);
+	k_nas_enc = jsonRes["k_nas_enc"].asUInt64();
+	k_nas_int = jsonRes["k_nas_int"].asUInt64();
 
 	TRACE(cout << "amf_handlesecuritymodecomplete:" << " security mode complete received: " << pkt.len << ": " << guti << endl;)
 
 	if (HMAC_ON) {
 		res = g_integrity.hmac_check(pkt, k_nas_int);
-		if (res == false) {
+		if (!res) {
 			TRACE(cout << "amf_handlesecuritymodecomplete:" << " hmac failure: " << guti << endl;)
 			g_utils.handle_type1_error(-1, "hmac failure: amf_handlesecuritymodecomplete");
 		}		
@@ -472,7 +458,7 @@ bool Amf::handle_security_mode_complete(int conn_fd, Packet pkt, SctpClient &udm
 		g_crypt.dec(pkt, k_nas_enc);
 	}
 	pkt.extract_item(res);
-	if (res == false) {
+	if (!res) {
 		TRACE(cout << "amf_handlesecuritymodecomplete:" << " security mode complete failure: " << guti << endl;)
 		return false;
 	}
@@ -482,7 +468,7 @@ bool Amf::handle_security_mode_complete(int conn_fd, Packet pkt, SctpClient &udm
 	}
 }
 
-void Amf::handle_location_update(Packet pkt, SctpClient &ausf_client, SctpClient &udm_client) {
+void Amf::handle_location_update(Packet pkt, int worker_id) {
 	uint64_t guti;
 	uint64_t imsi;
 	uint64_t default_apn;
@@ -495,33 +481,46 @@ void Amf::handle_location_update(Packet pkt, SctpClient &ausf_client, SctpClient
 	// g_sync.mlock(uectx_mux);
 	// imsi = ue_ctx[guti].imsi;
 	// g_sync.munlock(uectx_mux);
-	pkt.clear_pkt();
-	pkt.append_item(guti);
-	pkt.prepend_diameter_hdr(10,pkt.len);
-	udm_client.snd(pkt);
+	Json::Value reqPkt, jsonRes;
+	reqPkt["guti"] = touint64(guti);
 
-	udm_client.rcv(pkt);
-	pkt.extract_item(imsi);
+	bool parsingSuccessful = send_and_receive(
+		g_udm_ip_addr,
+		UDM_PORT_START_RANGE + worker_id,
+		"/Nudm_UECM/10",
+		reqPkt, jsonRes
+	);
+
+	if(!parsingSuccessful) {
+		// TODO: handle error
+		cout << "amf_handlelocationupdate: Response received from UDM parsing failed" << endl;
+	}
+
+	TRACE(cout<<"amf_handlelocationupdate: Packet received from udm for the location update :: " << jsonRes <<endl;)
+
+	imsi = jsonRes["imsi"].asUInt64();
 	
-	pkt.clear_pkt();
-	pkt.append_item(imsi);
-	pkt.append_item(amf_ids.amfi);
-	pkt.prepend_diameter_hdr(2, pkt.len);
-	ausf_client.snd(pkt);
-	TRACE(cout << "amf_handlelocationupdate:" << " loc update sent to ausf: " << guti << endl;)
+	reqPkt.clear();
+	jsonRes.clear();
+	reqPkt["imsi"] = touint64(imsi);
+	reqPkt["mmei"] = touint(amf_ids.amfi);
 
-	ausf_client.rcv(pkt);
+	parsingSuccessful = send_and_receive(
+		g_ausf_ip_addr,
+		AUSF_AMF_PORT_START_RANGE + worker_id,
+		"/Nausf_UEAuthentication/LocationUpdate",
+		reqPkt, jsonRes
+	);
 	TRACE(cout << "amf_handlelocationupdate:" << " loc update response received from ausf: " << guti << endl;)
 
-	pkt.extract_diameter_hdr();
-	pkt.extract_item(default_apn);
+	default_apn = jsonRes["default_apn"].asUInt64();
 	g_sync.mlock(uectx_mux);
 	ue_ctx[guti].default_apn = default_apn;
 	ue_ctx[guti].apn_in_use = ue_ctx[guti].default_apn;
 	g_sync.munlock(uectx_mux);
 }
 
-void Amf::handle_create_session(int conn_fd, Packet pkt, UdpClient &smf_client, SctpClient &udm_client, int worker_id) {
+void Amf::handle_create_session(int conn_fd, Packet pkt, int worker_id) {
 
 	vector<uint64_t> tai_list;
 	uint64_t guti;
@@ -551,7 +550,7 @@ void Amf::handle_create_session(int conn_fd, Packet pkt, UdpClient &smf_client, 
 	}
 
 	eps_bearer_id = 5;
-	set_upf_info(guti, udm_client);
+	set_upf_info(guti, worker_id);
 
 	//
 	g_sync.mlock(uectx_mux);
@@ -568,136 +567,84 @@ void Amf::handle_create_session(int conn_fd, Packet pkt, UdpClient &smf_client, 
 	//
 
 	pkt.clear_pkt();
-	pkt.append_item(guti);
-	pkt.append_item(get_s11cteidamf(guti));
-	pkt.append_item(eps_bearer_id);
-	pkt.prepend_diameter_hdr(11,pkt.len);
-	udm_client.snd(pkt);
 
-	udm_client.rcv(pkt);
-	pkt.extract_item(s11_cteid_amf);
-	pkt.extract_item(imsi);
-	pkt.extract_item(eps_bearer_id);
-	pkt.extract_item(upf_smf_ip_addr);
-	pkt.extract_item(upf_smf_port);
-	pkt.extract_item(apn_in_use);
-	pkt.extract_item(tai);
+	Json::Value requestPkt, jsonRes;
+	requestPkt["guti"] = touint64(guti);
+	requestPkt["s11_cteid_amf"] = touint(get_s11cteidamf(guti));
+	requestPkt["eps_bearer_id"] = touint(eps_bearer_id);
 
-	TRACE(cout << "amf_createsession:" << " create session request sent to smf: " << guti << endl;)
+	bool parsingSuccessful = send_and_receive(
+		g_udm_ip_addr,
+		UDM_PORT_START_RANGE + worker_id,
+		"/Nudm_UECM/11",
+		requestPkt, jsonRes
+	);
 
-	Json::Value requestPkt;
-	requestPkt["guti"] = to_string(guti);
-	requestPkt["imsi"] = to_string(imsi);
-	requestPkt["s11_cteid_mme"] = to_string(s11_cteid_amf);
-	requestPkt["eps_bearer_id"] = to_string(eps_bearer_id);
-	requestPkt["apn_in_use"] = to_string(apn_in_use);
-	requestPkt["tai"] = to_string(tai);
+	if(!parsingSuccessful) {
+		// TODO: handle error
+		cout << "amf_createsession: Response received from UDM parsing failed" << endl;
+	}
 
-	Json::FastWriter fastWriter;
-	std::string jsonPkt = fastWriter.write(requestPkt);
-	std::string jsonResponsePkt = "";
+	TRACE(cout << "amf_createsession:" << "Packet receieved from UDM for creating session :: " << jsonRes << endl;)
 
-	boost::asio::io_service io_service;
-	session sess(io_service, smf_amf_ip_addr, to_string(SMF_AMF_PORT_START_RANGE + worker_id));
+	s11_cteid_amf = jsonRes["s11_cteid_amf"].asUInt();
+	imsi = jsonRes["imsi"].asUInt64();
+	eps_bearer_id = jsonRes["eps_bearer_id"].asUInt();
+	upf_smf_ip_addr = jsonRes["upf_smf_ip_addr"].asString();
+	upf_smf_port = jsonRes["upf_smf_port"].asInt();
+	apn_in_use = jsonRes["apn_in_use"].asUInt64();
+	tai = jsonRes["tai"].asUInt64();
 
-	sess.on_connect([&sess, &worker_id, &jsonPkt, &jsonResponsePkt](tcp::resolver::iterator endpoint_it) {
-		boost::system::error_code ec;
-		string port_id = to_string(SMF_AMF_PORT_START_RANGE + worker_id);
-		string uri = "http://" + smf_amf_ip_addr + ":" + port_id + "/Nsmf_PDUSession/CreateSMContext";
-		cout << "amf_createsession: Connecting to " << uri << "\n\tPOST Request\n\tPayload: " << jsonPkt << endl;
-		auto req = sess.submit(ec, "POST", uri, jsonPkt);
+	requestPkt.clear();
+	jsonRes.clear();
+	requestPkt["guti"] = touint64(guti);
+	requestPkt["imsi"] = touint64(imsi);
+	requestPkt["s11_cteid_mme"] = touint(s11_cteid_amf);
+	requestPkt["eps_bearer_id"] = touint(eps_bearer_id);
+	requestPkt["apn_in_use"] = touint64(apn_in_use);
+	requestPkt["tai"] = touint64(tai);
 
-		req->on_response([&jsonPkt, &uri, &jsonResponsePkt, &sess](const response &res) {
-			//TODO handle respone errors
-			if(res.status_code() != 200) {
-				cout << "amf_createsession: Connecting to " << uri << " failed with Status_Code : " << res.status_code() << endl;
-			}
-			res.on_data([&jsonPkt, &jsonResponsePkt, &sess](const uint8_t *data, std::size_t len) {
-				if (len > 0)
-				{
-					const char *s = "";
-					s = reinterpret_cast<const char *>(data);
-					// collecting all the data
-					if(len > 0) {
-						jsonResponsePkt.append(s, len);
-					}
-				}
-			});
-		});
-		req->on_close([&jsonResponsePkt, &uri, &sess](uint32_t error_code) {
-			//shutdown session after first request was done.
-			sess.shutdown();
-		});
-	});
+	parsingSuccessful = send_and_receive(
+		smf_amf_ip_addr, 
+		SMF_AMF_PORT_START_RANGE + worker_id, 
+		"/Nsmf_PDUSession/CreateSMContext",
+		requestPkt, jsonRes
+	);
 
-	sess.on_error([](const boost::system::error_code &ec) {
-		std::cerr << "error: " << ec.message() << std::endl;
-	});
-
-	io_service.run();
-
-	TRACE(cout << "amf_createsession :: Received from SMF : " << jsonResponsePkt << endl;)
+	TRACE(cout << "amf_createsession :: Received from SMF : " << jsonRes << endl;)
 	TRACE(cout << "amf_createsession:" << " create session response received smf: " << guti << endl;)
 
-	Json::Value jsonRes;
-	Json::Reader reader;
-
-	std::string pktString;
-	std::istringstream iss;
-	bool parsingSuccessful = reader.parse(jsonResponsePkt, jsonRes);
-
 	//TODO handle respone errors
-	if(parsingSuccessful == false) {
+	if(!parsingSuccessful) {
 		cout << "amf_createsession: Response received from SMF parsing failed" << endl;
 	}
 
 	if(jsonRes.isMember("guti")) {
-		pktString = jsonRes["guti"].asString();
-		iss.str(pktString);
-		iss >> guti;
-		iss.clear();
+		guti = jsonRes["guti"].asUInt64();
 	}
 
 	if(jsonRes.isMember("eps_bearer_id")) {
-		pktString = jsonRes["eps_bearer_id"].asString();
-		iss.str(pktString);
-		iss >> eps_bearer_id;
-		iss.clear();
+		eps_bearer_id = jsonRes["eps_bearer_id"].asUInt();
 	}
 
 	if(jsonRes.isMember("e_rab_id")) {
-		pktString = jsonRes["e_rab_id"].asString();
-		iss.str(pktString);
-		iss >> e_rab_id;
-		iss.clear();
+		e_rab_id = jsonRes["e_rab_id"].asUInt();
 	}
 
 	if(jsonRes.isMember("s1_uteid_ul")) {
-		pktString = jsonRes["s1_uteid_ul"].asString();
-		iss.str(pktString);
-		iss >> s1_uteid_ul;
-		iss.clear();
+		s1_uteid_ul = jsonRes["s1_uteid_ul"].asUInt();
 	}
 
 	if(jsonRes.isMember("s11_cteid_sgw")) {
-		pktString = jsonRes["s11_cteid_sgw"].asString();
-		iss.str(pktString);
-		iss >> s11_cteid_upf;
-		iss.clear();
+		s11_cteid_upf = jsonRes["s11_cteid_sgw"].asUInt();
 	}
 
 	if(jsonRes.isMember("k_enodeb")) {
-		pktString = jsonRes["k_enodeb"].asString();
-		iss.str(pktString);
-		iss >> k_enodeb;
-		iss.clear();
+		k_enodeb = jsonRes["k_enodeb"].asUInt64();
 	}
 
 	if(jsonRes.isMember("tai_list_size")) {
-		pktString = jsonRes["tai_list_size"].asString();
-		iss.str(pktString);
-		iss >> tai_list_size;
-		iss.clear();
+		tai_list_size = jsonRes["tai_list_size"].asInt();
 	}
 
 	if(jsonRes.isMember("tai_list")) {
@@ -705,19 +652,13 @@ void Amf::handle_create_session(int conn_fd, Packet pkt, UdpClient &smf_client, 
 		Json::Value taiListVals = jsonRes["tai_list"];
 		uint64_t taiListElem;
 		for( Json::ValueIterator itr = taiListVals.begin() ; itr != taiListVals.end() ; itr++ ) {
-			pktString = itr->asString();
-			iss.str(pktString);
-			iss >> taiListElem;
-			iss.clear();
+			taiListElem = itr->asUInt64();
 			tai_list.push_back(taiListElem);
 		}
 	}
 
 	if(jsonRes.isMember("tau_timer")) {
-		pktString = jsonRes["tau_timer"].asString();
-		iss.str(pktString);
-		iss >> tau_timer;
-		iss.clear();
+		tau_timer = jsonRes["tau_timer"].asUInt64();
 	}
 
 	if(jsonRes.isMember("ue_ip_addr")) {
@@ -729,17 +670,11 @@ void Amf::handle_create_session(int conn_fd, Packet pkt, UdpClient &smf_client, 
 	}
 
 	if(jsonRes.isMember("upf_s1_port")) {
-		pktString = jsonRes["upf_s1_port"].asString();
-		iss.str(pktString);
-		iss >> g_upf_s1_port;
-		iss.clear();
+		g_upf_s1_port = jsonRes["upf_s1_port"].asInt();
 	}
 
 	if(jsonRes.isMember("res")) {
-		pktString = jsonRes["res"].asString();
-		iss.str(pktString);
-		iss >> res;
-		iss.clear();
+		res = jsonRes["res"].asBool();
 	}
 
 	TRACE(cout << "amf_createsession:" << " create session IP addr: " << g_upf_s1_ip_addr << ":" << g_upf_s1_port << endl;)
@@ -765,23 +700,41 @@ void Amf::handle_create_session(int conn_fd, Packet pkt, UdpClient &smf_client, 
 	//
 
 	pkt.clear_pkt();
-	pkt.append_item(guti);
-	pkt.append_item(ue_ip_addr);
-	pkt.append_item(s11_cteid_upf);
-	pkt.append_item(s1_uteid_ul);
-	pkt.append_item(tau_timer);
-	pkt.prepend_diameter_hdr(12,pkt.len);
-	udm_client.snd(pkt);
 
-	udm_client.rcv(pkt);
-	pkt.extract_item(e_rab_id);
-	pkt.extract_item(k_enodeb);
-	pkt.extract_item(nw_capability);
-	pkt.extract_item(tai_list_size);
-	pkt.extract_item(tai_list, tai_list_size);
-	pkt.extract_item(tau_timer);
-	pkt.extract_item(k_nas_enc);
-	pkt.extract_item(k_nas_int);
+	requestPkt.clear();
+	jsonRes.clear();
+	requestPkt["guti"] = touint64(guti);
+	requestPkt["ue_ip_addr"] = ue_ip_addr;
+	requestPkt["s11_cteid_upf"] = touint(s11_cteid_upf);
+	requestPkt["s1_uteid_ul"] = touint(s1_uteid_ul);
+	requestPkt["tau_timer"] = touint64(tau_timer);
+
+	parsingSuccessful = send_and_receive(
+		g_udm_ip_addr,
+		UDM_PORT_START_RANGE + worker_id,
+		"/Nudm_UECM/12",
+		requestPkt, jsonRes
+	);
+
+	if(!parsingSuccessful) {
+		// TODO: handle error
+		cout << "amf_createsession: Response received from UDM parsing failed" << endl;
+	}
+
+	e_rab_id = jsonRes["e_rab_id"].asUInt();
+	k_enodeb = jsonRes["k_enodeb"].asUInt64();
+	nw_capability = jsonRes["nw_capability"].asUInt64();
+	tai_list.clear();
+	Json::Value taiListVals = jsonRes["tai_list"];
+	uint64_t taiListElem;
+	for( Json::ValueIterator itr = taiListVals.begin() ; itr != taiListVals.end() ; itr++ ) {
+		taiListElem = itr->asUInt64();
+		tai_list.push_back(taiListElem);
+	}
+
+	tau_timer = jsonRes["tau_timer"].asUInt64();
+	k_nas_enc = jsonRes["k_nas_enc"].asUInt64();
+	k_nas_int = jsonRes["k_nas_int"].asUInt64();
 
 	res = true;
 	tai_list_size = 1;
@@ -812,7 +765,7 @@ void Amf::handle_create_session(int conn_fd, Packet pkt, UdpClient &smf_client, 
 	TRACE(cout << "amf_createsession:" << " attach accept sent to ue: " << pkt.len << ": " << guti << endl;)
 }
 
-void Amf::handle_attach_complete(Packet pkt, SctpClient &udm_client) {
+void Amf::handle_attach_complete(Packet pkt, int worker_id) {
 	uint64_t guti;
 	uint64_t k_nas_enc;
 	uint64_t k_nas_int;
@@ -832,21 +785,29 @@ void Amf::handle_attach_complete(Packet pkt, SctpClient &udm_client) {
 	// g_sync.munlock(uectx_mux);
 	//
 
-	Packet pkt1;
-	pkt1.clear_pkt();
-	pkt1.append_item(guti);
-	pkt1.prepend_diameter_hdr(13,pkt1.len);
-	udm_client.snd(pkt1);
+	Json::Value requestPkt, jsonRes;
+	requestPkt["guti"] = touint64(guti);
 
-	udm_client.rcv(pkt1);
-	pkt1.extract_item(k_nas_enc);
-	pkt1.extract_item(k_nas_int);
+	bool parsingSuccessful = send_and_receive(
+		g_udm_ip_addr,
+		UDM_PORT_START_RANGE + worker_id,
+		"/Nudm_UECM/13",
+		requestPkt, jsonRes
+	);
+
+	if(!parsingSuccessful) {
+		// TODO: handle error
+		cout << "amf_handleattachcomplete: Response received from UDM parsing failed" << endl;
+	}
+
+	k_nas_enc = jsonRes["k_nas_enc"].asUInt64();
+	k_nas_int = jsonRes["k_nas_int"].asUInt64();
 
 	TRACE(cout << "amf_handleattachcomplete:" << " attach complete received: " << pkt.len << ": " << guti << endl;)
 
 	if (HMAC_ON) {
 		res = g_integrity.hmac_check(pkt, k_nas_int);
-		if (res == false) {
+		if (!res) {
 			TRACE(cout << "amf_handleattachcomplete:" << " hmac failure: " << guti << endl;)
 			g_utils.handle_type1_error(-1, "hmac failure: amf_handleattachcomplete");
 		}
@@ -862,15 +823,23 @@ void Amf::handle_attach_complete(Packet pkt, SctpClient &udm_client) {
 	// ue_ctx[guti].emm_state = 1;
 	// g_sync.munlock(uectx_mux);
 	//
-	pkt1.clear_pkt();
-	pkt1.append_item(guti);
-	pkt1.append_item(s1_uteid_dl);
-	pkt1.prepend_diameter_hdr(14, pkt1.len);
-	udm_client.snd(pkt1);
+
+	requestPkt.clear();
+	jsonRes.clear();
+	requestPkt["guti"] = touint64(guti);
+	requestPkt["s1_uteid_dl"] = touint(s1_uteid_dl);
+
+	send_and_receive(
+		g_udm_ip_addr,
+		UDM_PORT_START_RANGE + worker_id,
+		"/Nudm_UECM/14",
+		requestPkt, jsonRes
+	);
+
 	TRACE(cout << "amf_handleattachcomplete:" << " attach completed: " << guti << endl;)
 }
 
-void Amf::handle_modify_bearer(Packet pkt, UdpClient &smf_client, SctpClient &udm_client, int worker_id) {
+void Amf::handle_modify_bearer(Packet pkt, int worker_id) {
 
 	uint64_t guti;
 	uint32_t s1_uteid_dl;
@@ -892,92 +861,58 @@ void Amf::handle_modify_bearer(Packet pkt, UdpClient &smf_client, SctpClient &ud
 	// g_sync.munlock(uectx_mux);
 	//
 
-	pkt.clear_pkt();
-	pkt.append_item(guti);
-	pkt.prepend_diameter_hdr(15,pkt.len);
-	udm_client.snd(pkt);
 
-	udm_client.rcv(pkt);
-	pkt.extract_item(eps_bearer_id);
-	pkt.extract_item(s1_uteid_dl);
-	pkt.extract_item(s11_cteid_upf);
+	Json::Value requestPkt, jsonRes;
+	requestPkt["guti"] = touint64(guti);
+
+	bool parsingSuccessful = send_and_receive(
+		g_udm_ip_addr,
+		UDM_PORT_START_RANGE + worker_id,
+		"/Nudm_UECM/15",
+		requestPkt, jsonRes
+	);
+
+	if(!parsingSuccessful) {
+		// TODO: handle error
+		cout << "amf_handlemodifybearer: Response received from UDM parsing failed" << endl;
+	}
+
+	eps_bearer_id = jsonRes["eps_bearer_id"].asUInt();
+	s1_uteid_dl = jsonRes["s1_uteid_dl"].asUInt();
+	s11_cteid_upf = jsonRes["s11_cteid_upf"].asUInt();
 
 	TRACE(cout << "amf_handlemodifybearer:" << " modify bearer request sent to smf: " << guti << endl;)
 
-	Json::Value requestPkt;
-	requestPkt["guti"] = to_string(guti);
-	requestPkt["s1_uteid_dl"] = to_string(s1_uteid_dl);
-	requestPkt["eps_bearer_id"] = to_string(eps_bearer_id);
+	requestPkt.clear();
+	jsonRes.clear();
+	requestPkt["guti"] = touint64(guti);
+	requestPkt["s1_uteid_dl"] = touint(s1_uteid_dl);
+	requestPkt["eps_bearer_id"] = touint(eps_bearer_id);
 	requestPkt["g_trafmon_ip_addr"] = g_trafmon_ip_addr;
-	requestPkt["g_trafmon_port"] = to_string(g_trafmon_port);
+	requestPkt["g_trafmon_port"] = toint(g_trafmon_port);
 
-	Json::FastWriter fastWriter;
-	std::string jsonPkt = fastWriter.write(requestPkt);
-	std::string jsonResponsePkt = "";
+	parsingSuccessful = send_and_receive(
+		smf_amf_ip_addr, 
+		SMF_AMF_PORT_START_RANGE + worker_id, 
+		"/Nsmf_PDUSession/UpdateSMContext",
+		requestPkt, jsonRes
+	);
 
-	boost::asio::io_service io_service;
-	session sess(io_service, smf_amf_ip_addr, to_string(SMF_AMF_PORT_START_RANGE + worker_id));
-
-	sess.on_connect([&sess, &worker_id, &jsonPkt, &jsonResponsePkt](tcp::resolver::iterator endpoint_it) {
-		boost::system::error_code ec;
-		string port_id = to_string(SMF_AMF_PORT_START_RANGE + worker_id);
-		string uri = "http://" + smf_amf_ip_addr + ":" + port_id + "/Nsmf_PDUSession/UpdateSMContext";
-		cout << "Connecting to " << uri << "\n\tPOST Request\n\tPayload: " << jsonPkt << endl;
-		auto req = sess.submit(ec, "POST", uri, jsonPkt);
-
-		req->on_response([&jsonPkt, &uri, &jsonResponsePkt, &sess](const response &res) {
-			//TODO handle response errors
-			if(res.status_code() != 200) {
-				TRACE(cout << "ERROR << amf_handlemodifybearer:" << " modify bearer failure: " << "Connecting to " << uri << " failed with Status_Code : " << res.status_code() << endl;)
-			}
-			res.on_data([&jsonPkt, &jsonResponsePkt, &sess](const uint8_t *data, std::size_t len) {
-				if (len > 0)
-				{
-					const char *s = "";
-					s = reinterpret_cast<const char *>(data);
-					// collecting all the data
-					if(len > 0) {
-						jsonResponsePkt.append(s, len);
-					}
-				}
-			});
-		});
-		req->on_close([&jsonResponsePkt, &uri, &sess](uint32_t error_code) {
-			//shutdown session after first request was done.
-			sess.shutdown();
-		});
-	});
-
-	sess.on_error([](const boost::system::error_code &ec) {
-		std::cerr << "error: " << ec.message() << std::endl;
-	});
-
-	io_service.run();
-
-	TRACE(cout << "amf_handlemodifybearer :: Received from SMF : " << jsonResponsePkt << endl;)
+	TRACE(cout << "amf_handlemodifybearer :: Received from SMF : " << jsonRes << endl;)
 	TRACE(cout << "amf_handlemodifybearer:" << " modify bearer response received from smf: " << guti << endl;)
 
-	Json::Value jsonRes;
-	Json::Reader reader;
 
-	std::string pktString;
-	std::istringstream iss;
-	bool parsingSuccessful = reader.parse(jsonResponsePkt, jsonRes);
-
-	//TODO handle response errors
-	if(parsingSuccessful == false) {
+	// TODO handle response errors
+	if(!parsingSuccessful) {
 		TRACE(cout << "ERROR :: amf_handlemodifybearer:" << " modify bearer failure: JSON parsing failed" << endl;)
 	}
 
 	res = false; 		// Default res failed
 	if(jsonRes.isMember("res")) {
-		pktString = jsonRes["res"].asString();
-		iss.str(pktString);
-		iss >> res;
-		iss.clear();
+		res = jsonRes["res"].asBool();
 	}
 
-	if (res == false) {
+	if (!res) {
 		TRACE(cout << "ERROR :: amf_handlemodifybearer:" << " modify bearer failure: " << guti << endl;)
 	}
 	else {
@@ -1027,7 +962,7 @@ void Amf::setup_indirect_tunnel(Packet pkt) {
 	SctpClient to_source_ran_client;
 	to_source_ran_client.conn(s_ran_ip_addr, s_ran_port);
 
-	if (res == true) {
+	if (res) {
 
 		pkt.clear_pkt();
 		pkt.append_item(s1_uteid_ul);
@@ -1109,7 +1044,7 @@ void Amf::handle_handover_completion(Packet pkt) {
 	SctpClient to_source_ran_client;
 	to_source_ran_client.conn(s_ran_ip_addr.c_str(), s_ran_port);
 
-	if (res == true) {
+	if (res) {
 
 		pkt.clear_pkt();
 		pkt.append_item(res);
@@ -1156,7 +1091,7 @@ void Amf::teardown_indirect_tunnel(Packet pkt) {
 		cout << "tear down complted:" << " " << endl;
 }
 
-void Amf::handle_detach(int conn_fd, Packet pkt, UdpClient &smf_client, SctpClient &udm_client, int worker_id) {
+void Amf::handle_detach(int conn_fd, Packet pkt, int worker_id) {
 
 	uint64_t guti;
 	uint64_t k_nas_enc;
@@ -1183,24 +1118,32 @@ void Amf::handle_detach(int conn_fd, Packet pkt, UdpClient &smf_client, SctpClie
 	// g_sync.munlock(uectx_mux);
 	//
 
-	Packet pkt1;
-	pkt1.clear_pkt();
-	pkt1.append_item(guti);
-	pkt1.prepend_diameter_hdr(16,pkt.len);
-	udm_client.snd(pkt);
+	Json::Value requestPkt, jsonRes;
+	requestPkt["guti"] = touint64(guti);
 
-	udm_client.rcv(pkt1);
-	pkt1.extract_item(k_nas_enc);
-	pkt1.extract_item(k_nas_int);
-	pkt1.extract_item(eps_bearer_id);
-	pkt1.extract_item(tai);
-	pkt1.extract_item(s11_cteid_upf);
+	bool parsingSuccessful = send_and_receive(
+		g_udm_ip_addr,
+		UDM_PORT_START_RANGE + worker_id,
+		"/Nudm_UECM/16",
+		requestPkt, jsonRes
+	);
+
+	if(!parsingSuccessful) {
+		// TODO: handle error
+		cout << "amf_handledetach: Response received from UDM parsing failed" << endl;
+	}
+
+	k_nas_enc = jsonRes["k_nas_enc"].asUInt64();
+	k_nas_int = jsonRes["k_nas_int"].asUInt64();
+	eps_bearer_id = jsonRes["eps_bearer_id"].asUInt();
+	tai = jsonRes["tai"].asUInt64();
+	s11_cteid_upf = jsonRes["s11_cteid_upf"].asUInt();
 
 	TRACE(cout << "amf_handledetach:" << " detach req received: " << pkt.len << ": " << guti << endl;)
 
 	if (HMAC_ON) {
 		res = g_integrity.hmac_check(pkt, k_nas_int);
-		if (res == false)
+		if (!res)
 		{
 			TRACE(cout << "amf_handledetach:"
 					   << " hmac detach failure: " << guti << endl;)
@@ -1216,79 +1159,34 @@ void Amf::handle_detach(int conn_fd, Packet pkt, UdpClient &smf_client, SctpClie
 
 	TRACE(cout << "amf_handledetach:" << " detach request sent to smf: " << guti << endl;)
 
-	Json::Value requestPkt;
-	requestPkt["guti"] = to_string(guti);
-	requestPkt["eps_bearer_id"] = to_string(eps_bearer_id);
-	requestPkt["tai"] = to_string(tai);
+	requestPkt.clear();
+	jsonRes.clear();
+	requestPkt["guti"] = touint64(guti);
+	requestPkt["eps_bearer_id"] = touint(eps_bearer_id);
+	requestPkt["tai"] = touint64(tai);
 
-	Json::FastWriter fastWriter;
-	std::string jsonPkt = fastWriter.write(requestPkt);
-	std::string jsonResponsePkt = "";
+	parsingSuccessful = send_and_receive(
+		smf_amf_ip_addr, 
+		SMF_AMF_PORT_START_RANGE + worker_id, 
+		"/Nsmf_PDUSession/ReleaseSMContext",
+		requestPkt, jsonRes
+	);
 
-	boost::asio::io_service io_service;
-	session sess(io_service, smf_amf_ip_addr, to_string(SMF_AMF_PORT_START_RANGE + worker_id));
-
-	sess.on_connect([&sess, &worker_id, &jsonPkt, &jsonResponsePkt](tcp::resolver::iterator endpoint_it) {
-		boost::system::error_code ec;
-		string port_id = to_string(SMF_AMF_PORT_START_RANGE + worker_id);
-		string uri = "http://" + smf_amf_ip_addr + ":" + port_id + "/Nsmf_PDUSession/ReleaseSMContext";
-		cout << "Connecting to " << uri << "\n\tPOST Request\n\tPayload: " << jsonPkt << endl;
-		auto req = sess.submit(ec, "POST", uri, jsonPkt);
-
-		req->on_response([&jsonPkt, &uri, &jsonResponsePkt, &sess](const response &res) {
-			//TODO handle respone errors
-			if(res.status_code() != 200) {
-				cout << "Connecting to " << uri << " failed with Status_Code : " << res.status_code() << endl;
-			}
-			res.on_data([&jsonPkt, &jsonResponsePkt, &sess](const uint8_t *data, std::size_t len) {
-				if (len > 0)
-				{
-					const char *s = "";
-					s = reinterpret_cast<const char *>(data);
-					// collecting all the data
-					if(len > 0) {
-						jsonResponsePkt.append(s, len);
-					}
-				}
-			});
-		});
-		req->on_close([&jsonResponsePkt, &uri, &sess](uint32_t error_code) {
-			//shutdown session after first request was done.
-			sess.shutdown();
-		});
-	});
-
-	sess.on_error([](const boost::system::error_code &ec) {
-		std::cerr << "error: " << ec.message() << std::endl;
-	});
-
-	io_service.run();
-
-	TRACE(cout << "amf_handledetach :: Received from SMF : " << jsonResponsePkt << endl;)
+	TRACE(cout << "amf_handledetach :: Received from SMF : " << jsonRes << endl;)
 	TRACE(cout << "amf_handledetach:" << " detach response received from smf: " << guti << endl;)
 
-	Json::Value jsonRes;
-	Json::Reader reader;
-
-	std::string pktString;
-	std::istringstream iss;
-	bool parsingSuccessful = reader.parse(jsonResponsePkt, jsonRes);
-
 	// TODO handle respone errors
-	if(parsingSuccessful == false) {
+	if(!parsingSuccessful) {
 		TRACE(cout << "ERROR :: amf_handledetach:" << " handle detach failure: JSON parsing failed" << endl;)
 		return;
 	}
 
 	res = false; 		// Default res failed
 	if(jsonRes.isMember("res")) {
-		pktString = jsonRes["res"].asString();
-		iss.str(pktString);
-		iss >> res;
-		iss.clear();
+		res = jsonRes["res"].asBool();
 	}
 
-	if (res == false) {
+	if (!res) {
 		TRACE(cout << "ERROR :: amf_handledetach:" << " detach failure: " << guti << endl;)
 		return;
 	}
@@ -1313,22 +1211,27 @@ void Amf::handle_detach(int conn_fd, Packet pkt, UdpClient &smf_client, SctpClie
 }
 
 
-void Amf::set_upf_info(uint64_t guti, SctpClient &udm_client) {
+void Amf::set_upf_info(uint64_t guti, int worker_id) {
 	//
 	g_sync.mlock(uectx_mux);
 	ue_ctx[guti].upf_smf_port = g_upf_smf_port;
 	ue_ctx[guti].upf_smf_ip_addr = g_upf_smf_ip_addr;
 	g_sync.munlock(uectx_mux);
-	//
-	Packet pkt1;
-	pkt1.clear_pkt();
-	pkt1.append_item(guti);
-	pkt1.append_item(g_upf_smf_port);
-	pkt1.append_item(g_upf_smf_ip_addr);
-	pkt1.prepend_diameter_hdr(17,pkt1.len);
-	udm_client.snd(pkt1);
 
+
+	Json::Value requestPkt, jsonRes;
+	requestPkt["guti"] = touint64(guti);
+	requestPkt["upf_smf_port"] = toint(g_upf_smf_port);
+	requestPkt["upf_smf_ip_addr"] = g_upf_smf_ip_addr;
+
+	send_and_receive(
+		g_udm_ip_addr,
+		UDM_PORT_START_RANGE + worker_id,
+		"/Nudm_UECM/17",
+		requestPkt, jsonRes
+	);
 }
+
 uint64_t Amf::get_guti(Packet pkt) {
 	uint64_t mme_s1ap_ue_id;
 	uint64_t guti;

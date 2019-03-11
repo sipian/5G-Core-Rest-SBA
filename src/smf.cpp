@@ -1,5 +1,8 @@
 #include "smf.h"
 #include "discover.h"
+#include "ports.h"
+#include "rest_utils.h"
+#include <jsoncpp/json/json.h>
 
 using namespace ppconsul;
 using ppconsul::Consul;
@@ -90,7 +93,7 @@ void Smf::clrstl() {
 	ue_ctx.clear();
 }
 
-void Smf::handle_create_session(CreateSMContextRequestPacket &requestPkt, CreateSMContextResponsPacket &responsePkt, UdpClient &upf_client, SctpClient &udm_client) {
+void Smf::handle_create_session(CreateSMContextRequestPacket &requestPkt, CreateSMContextResponsPacket &responsePkt, UdpClient &upf_client, int worker_id) {
 	vector<uint64_t> tai_list;
 	uint64_t guti;
 	uint64_t imsi;
@@ -138,27 +141,37 @@ void Smf::handle_create_session(CreateSMContextRequestPacket &requestPkt, Create
 	// apn_in_use = ue_ctx[guti].apn_in_use;
 	// tai = ue_ctx[guti].tai;
 
-	Packet pkt;
-	pkt.clear_pkt();
-	pkt.append_item(guti);
-	pkt.append_item(s11_cteid_mme);
-	pkt.append_item(eps_bearer_id);
-	pkt.append_item(imsi);
-	pkt.append_item(apn_in_use);
-	pkt.append_item(tai);
-	pkt.prepend_diameter_hdr(18, pkt.len);
-	udm_client.snd(pkt);
+	Json::Value reqPkt, jsonRes;
+	reqPkt["guti"] = touint64(guti);
+	reqPkt["s11_cteid_mme"] = touint(s11_cteid_mme);
+	reqPkt["eps_bearer_id"] = touint(eps_bearer_id);
+	reqPkt["imsi"] = touint64(imsi);
+	reqPkt["apn_in_use"] = touint64(apn_in_use);
+	reqPkt["tai"] = touint64(tai);
+
+	bool parsingSuccessful = send_and_receive(
+		g_udm_ip_addr,
+		UDM_PORT_START_RANGE + worker_id,
+		"/Nudm_UECM/18",
+		reqPkt, jsonRes
+	);
+
+	if(!parsingSuccessful) {
+		// TODO: handle error
+		cout << "smf_createsession: ERROR : Failed to parse JSON from response received from UDM." << endl;
+	}
+
 	TRACE(cout<<"UE CTX request for updation sent to udm"<<endl;)
 
-	udm_client.rcv(pkt);
-	pkt.extract_item(s11_cteid_mme);
-	pkt.extract_item(eps_bearer_id);
-	pkt.extract_item(imsi);
-	pkt.extract_item(apn_in_use);
-	pkt.extract_item(tai);
+	s11_cteid_mme = jsonRes["s11_cteid_mme"].asUInt();
+	eps_bearer_id = jsonRes["eps_bearer_id"].asUInt();
+	imsi = jsonRes["imsi"].asUInt64();
+	apn_in_use = jsonRes["apn_in_use"].asUInt64();
+	tai = jsonRes["tai"].asUInt64();
 
 	upf_client.set_server(g_upf_smf_ip_addr, g_upf_smf_port);
 
+	Packet pkt;
 	pkt.clear_pkt();
 	pkt.append_item(s11_cteid_mme);
 	pkt.append_item(imsi);
@@ -191,20 +204,37 @@ void Smf::handle_create_session(CreateSMContextRequestPacket &requestPkt, Create
 	// tau_timer = ue_ctx[guti].tau_timer;
 	// g_sync.munlock(uectx_mux);
 
-	pkt.clear_pkt();
-	pkt.append_item(guti);
-	pkt.append_item(ue_ip_addr);
-	pkt.append_item(s11_cteid_sgw);
-	pkt.append_item(s1_uteid_ul);
-	pkt.append_item(g_timer);
-	pkt.prepend_diameter_hdr(19,pkt.len);
-	udm_client.snd(pkt);
+	reqPkt.clear();
+	jsonRes.clear();
+	reqPkt["guti"] = touint64(guti);
+	reqPkt["ue_ip_addr"] = ue_ip_addr;
+	reqPkt["s11_cteid_sgw"] = touint(s11_cteid_sgw);
+	reqPkt["s1_uteid_ul"] = touint(s1_uteid_ul);
+	reqPkt["g_timer"] = touint64(g_timer);
 
-	udm_client.rcv(pkt);
-	pkt.extract_item(e_rab_id);
-	pkt.extract_item(k_enodeb);
-	pkt.extract_item(tai_list,1);
-	pkt.extract_item(tau_timer);
+	parsingSuccessful = send_and_receive(
+		g_udm_ip_addr,
+		UDM_PORT_START_RANGE + worker_id,
+		"/Nudm_UECM/19",
+		reqPkt, jsonRes
+	);
+
+	if(!parsingSuccessful) {
+		// TODO: handle error
+		cout << "smf_createsession: ERROR : Failed to parse JSON from response received from UDM." << endl;
+	}
+
+	e_rab_id = jsonRes["e_rab_id"].asUInt();
+	k_enodeb = jsonRes["k_enodeb"].asUInt64();
+	tau_timer = jsonRes["tau_timer"].asUInt64();	
+	tai_list.clear();
+	Json::Value taiListVals = jsonRes["tai_list"];
+	uint64_t taiListElem;
+	for( Json::ValueIterator itr = taiListVals.begin() ; itr != taiListVals.end() ; itr++ ) {
+		taiListElem = itr->asUInt64();
+		tai_list.push_back(taiListElem);
+	}
+
 
 	res = true;
 	tai_list_size = 1;
@@ -224,7 +254,7 @@ void Smf::handle_create_session(CreateSMContextRequestPacket &requestPkt, Create
 	responsePkt.res = res;
 }
 
-void Smf::handle_modify_bearer(UpdateSMContextRequestPacket &requestPkt, UpdateSMContextResponsePacket &responsePkt, UdpClient &upf_client, SctpClient &udm_client) {
+void Smf::handle_modify_bearer(UpdateSMContextRequestPacket &requestPkt, UpdateSMContextResponsePacket &responsePkt, UdpClient &upf_client, int worker_id) {
 	uint64_t guti;
 	uint32_t s1_uteid_dl;
 	uint32_t s11_cteid_sgw;
@@ -245,19 +275,27 @@ void Smf::handle_modify_bearer(UpdateSMContextRequestPacket &requestPkt, UpdateS
 	g_trafmon_port = requestPkt.g_trafmon_port;
 
 	upf_client.set_server(g_upf_smf_ip_addr, g_upf_smf_port);
-	
+
+	Json::Value reqPkt, jsonRes;
+	reqPkt["guti"] = touint64(guti);
+
+	bool parsingSuccessful = send_and_receive(
+		g_udm_ip_addr,
+		UDM_PORT_START_RANGE + worker_id,
+		"/Nudm_UECM/20",
+		reqPkt, jsonRes
+	);
+
+	if(!parsingSuccessful) {
+		// TODO: handle error
+		cout << "smf_handlemodifybearer: ERROR : Failed to parse JSON from response received from UDM." << endl;
+	}
+
+	eps_bearer_id = jsonRes["eps_bearer_id"].asUInt();
+	s1_uteid_dl = jsonRes["s1_uteid_dl"].asUInt();
+	s11_cteid_sgw = jsonRes["s11_cteid_sgw"].asUInt();
+
 	Packet pkt;
-
-	pkt.clear_pkt();
-	pkt.append_item(guti);
-	pkt.prepend_diameter_hdr(20, pkt.len);
-	udm_client.snd(pkt);
-
-	udm_client.rcv(pkt);
-	pkt.extract_item(eps_bearer_id);
-	pkt.extract_item(s1_uteid_dl);
-	pkt.extract_item(s11_cteid_sgw);
-
 	pkt.clear_pkt();
 	pkt.append_item(eps_bearer_id);
 	pkt.append_item(s1_uteid_dl);
@@ -278,7 +316,7 @@ void Smf::handle_modify_bearer(UpdateSMContextRequestPacket &requestPkt, UpdateS
 	responsePkt.res = res;
 }
 
-void Smf::handle_detach(ReleaseSMContextRequestPacket &requestPkt, ReleaseSMContextResponsePacket &responsePkt, UdpClient &upf_client, SctpClient &udm_client) {
+void Smf::handle_detach(ReleaseSMContextRequestPacket &requestPkt, ReleaseSMContextResponsePacket &responsePkt, UdpClient &upf_client, int worker_id) {
 	uint64_t guti;
 	uint64_t k_nas_enc;
 	uint64_t k_nas_int;
@@ -304,17 +342,26 @@ void Smf::handle_detach(ReleaseSMContextRequestPacket &requestPkt, ReleaseSMCont
 	// g_sync.munlock(uectx_mux);
 	//
 
-	Packet pkt;
-	pkt.clear_pkt();
-	pkt.append_item(guti);
-	pkt.prepend_diameter_hdr(21, pkt.len);
-	udm_client.snd(pkt);
+	Json::Value reqPkt, jsonRes;
+	reqPkt["guti"] = touint64(guti);
 
-	udm_client.rcv(pkt);
-	pkt.extract_item(s11_cteid_sgw);
+	bool parsingSuccessful = send_and_receive(
+		g_udm_ip_addr,
+		UDM_PORT_START_RANGE + worker_id,
+		"/Nudm_UECM/21",
+		reqPkt, jsonRes
+	);
 
-	TRACE(cout << "smf_handledetach: detach req received from amf: " << pkt.len << ": " << guti << endl;)
+	if(!parsingSuccessful) {
+		// TODO: handle error
+		cout << "smf_handledetach: ERROR : Failed to parse JSON from response received from UDM." << endl;
+	}
+
+	s11_cteid_sgw = jsonRes["s11_cteid_sgw"].asUInt();
+
+	TRACE(cout << "smf_handledetach: detach req received from amf: " << guti << endl;)
 	
+	Packet pkt;
 	pkt.clear_pkt();
 	pkt.append_item(eps_bearer_id);
 	pkt.append_item(tai);

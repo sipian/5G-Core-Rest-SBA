@@ -13,6 +13,8 @@
 #include "sctp_client.h"
 #include "sync.h"
 #include "utils.h"
+#include <string>
+#include <jsoncpp/json/json.h>
 
 extern string g_udm_ip_addr;
 extern int g_udm_port;
@@ -100,27 +102,27 @@ class Udm {
 
         Udm();
         void handle_mysql_conn();
-        void get_autn_info(int, Packet&);
-        void set_loc_info(int, Packet&);
-        void update_info_amf_initial_attach(int, Packet&);
-        void update_info_amf_initial_attach_init(int, Packet&);
-        void handle_autn_ue_ctx_request(int, Packet&);
-        void ue_ctx_request_security_mode_cmd(int, Packet&);
-        void ue_ctx_request_set_crypt_context(int, Packet&);
-        void ue_ctx_update_set_integrity_context(int, Packet&);
-        void ue_ctx_request_handle_security_mode_complete(int, Packet&);
-        void ue_ctx_request_handle_location_update(int, Packet&);
-		void ue_ctx_request_handle_create_session(int, Packet&);
-		void ue_ctx_update_handle_craete_session(int, Packet&);
-		void ue_ctx_request_handle_attach_complete(int, Packet&);
-		void ue_ctx_update_handle_attach_complete(int, Packet&);
-		void ue_ctx_request_handle_modify_bearer(int, Packet&);
-		void ue_ctx_request_handle_detach(int, Packet&);
-		void ue_ctx_update_set_upf_info(int, Packet&);
-		void ue_ctx_request_smf_handle_create_session(int, Packet&);
-		void ue_ctx_update_smf_handle_create_session(int, Packet&);
-		void ue_ctx_request_smf_handle_modify_bearer(int, Packet&);
-		void ue_ctx_request_smf_handle_detach(int, Packet&);
+        std::string get_autn_info(Json::Value&);
+        std::string set_loc_info(Json::Value&);
+        std::string update_info_amf_initial_attach(Json::Value&);
+        std::string update_info_amf_initial_attach_init(Json::Value&);
+        std::string handle_autn_ue_ctx_request(Json::Value&);
+        std::string ue_ctx_request_security_mode_cmd(Json::Value&);
+        std::string ue_ctx_request_set_crypt_context(Json::Value&);
+        std::string ue_ctx_update_set_integrity_context(Json::Value&);
+        std::string ue_ctx_request_handle_security_mode_complete(Json::Value&);
+        std::string ue_ctx_request_handle_location_update(Json::Value&);
+		std::string ue_ctx_request_handle_create_session(Json::Value&);
+		std::string ue_ctx_update_handle_craete_session(Json::Value&);
+		std::string ue_ctx_request_handle_attach_complete(Json::Value&);
+		std::string ue_ctx_update_handle_attach_complete(Json::Value&);
+		std::string ue_ctx_request_handle_modify_bearer(Json::Value&);
+		std::string ue_ctx_request_handle_detach(Json::Value&);
+		std::string ue_ctx_update_set_upf_info(Json::Value&);
+		std::string ue_ctx_request_smf_handle_create_session(Json::Value&);
+		std::string ue_ctx_update_smf_handle_create_session(Json::Value&);
+		std::string ue_ctx_request_smf_handle_modify_bearer(Json::Value&);
+		std::string ue_ctx_request_smf_handle_detach(Json::Value&);
         ~Udm();
 };
 
