@@ -91,3 +91,6 @@ make ransim.out
 # first 10 denotes the num_of_ue_threads at RAN
 # second 10 denotes the time duration of each UE thread
 ```
+
+To disable logging, change the DEBUG macro present [here](https://github.com/sipian/5G-Core-Rest-SBA/blob/master/src/utils.h#L51) to 0.
+
