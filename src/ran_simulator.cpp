@@ -74,14 +74,8 @@ void simulate(int arg) {
 		// Start time
 		mstart_time = CLOCK::now();	
 		
-		auto t_start = std::chrono::high_resolution_clock::now();
-
 		// Initial attach
 		ran.initial_attach();
-
-		auto t_end = std::chrono::high_resolution_clock::now();
-		double elaspedTimeMs = std::chrono::duration<double, std::milli>(t_end - t_start).count();
-
 
 		// Authentication
 		ok = ran.authenticate();
