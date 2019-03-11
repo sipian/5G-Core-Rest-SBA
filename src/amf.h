@@ -1,11 +1,12 @@
 #ifndef AMF_H
 #define AMF_H
 
-#include "ports.h"
 #include "diameter.h"
 #include "gtp.h"
 #include "network.h"
 #include "packet.h"
+#include "ports.h"
+#include "ppconsul/agent.h"
 #include "s1ap.h"
 #include "sctp_client.h"
 #include "sctp_server.h"

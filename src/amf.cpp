@@ -10,38 +10,31 @@ using namespace nghttp2::asio_http2;
 using namespace nghttp2::asio_http2::client;
 using namespace std;
 using namespace std::chrono;
+using namespace ppconsul;
+using ppconsul::Consul;
 
-// string g_trafmon_ip_addr = "172.26.0.2";
-// string g_amf_ip_addr = "172.26.0.5";
-// string g_ausf_ip_addr = "172.26.0.4";
-// string g_upf_smf_ip_addr = "172.26.0.7";
-// string smf_amf_ip_addr = "172.26.0.6";
-// string g_upf_s1_ip_addr="172.26.0.7";
-// string g_upf_s11_ip_addr="172.26.0.7";
-// string g_udm_ip_addr="172.26.0.3";
+string g_trafmon_ip_addr = "";
+string g_amf_ip_addr = "";
+string g_ausf_ip_addr = "";
+string g_upf_smf_ip_addr = "";
+string smf_amf_ip_addr = "";
+string g_upf_s1_ip_addr = "";
+string g_upf_s11_ip_addr = "";
+string g_udm_ip_addr = "";
 
-string g_trafmon_ip_addr = resolve_host("ran");
-string g_amf_ip_addr = resolve_host("amf");
-string g_ausf_ip_addr = resolve_host("ausf");
-string g_upf_smf_ip_addr = resolve_host("upf");
-string smf_amf_ip_addr = resolve_host("smf");
-string g_upf_s1_ip_addr = resolve_host("upf");
-string g_upf_s11_ip_addr = resolve_host("upf");
-string g_udm_ip_addr = resolve_host("udm");
-
-int g_trafmon_port = 4000;
-int g_amf_port = 5000;
-int g_ausf_port = 6000;
-int smf_amf_port = 8500;
-int g_upf_smf_port = 8000;
-int g_upf_s1_port=7100;
-int g_upf_s11_port=7300;
+int g_trafmon_port = G_TRAFMON_PORT;
+int g_amf_port = G_AMF_PORT;
+int g_ausf_port = G_AUSF_PORT;
+int smf_amf_port = SMF_AMF_PORT;
+int g_upf_smf_port = AMF_G_UPF_SMF_PORT;
+int g_upf_s1_port = G_UPF_S1_PORT;
+int g_upf_s11_port = AMF_G_UPF_S11_PORT;
 uint64_t g_timer = 100;
-string t_ran_ip_addr = "10.129.26.169";
-int t_ran_port = 4905;
-string s_ran_ip_addr = "10.129.26.169";
-int s_ran_port = 4905;
-int g_udm_port = 6001;
+string t_ran_ip_addr = T_RAN_IP_ADDR;
+int t_ran_port = T_RAN_PORT;
+string s_ran_ip_addr = S_RAN_IP_ADDR;
+int s_ran_port = S_RAN_PORT;
+int g_udm_port = G_UDM_PORT;
 
 
 UeContext::UeContext() {
@@ -108,6 +101,20 @@ Amf::Amf() {
 	clrstl();
 	g_sync.mux_init(s1amfid_mux);
 	g_sync.mux_init(uectx_mux);
+
+	Consul consul(CONSUL_ADDR);
+	agent::Agent consulAgent(consul);
+
+	serviceRegister("amf", consulAgent);
+
+	g_trafmon_ip_addr = resolve_host("ran");
+	g_amf_ip_addr = getMyIPAddress();
+	g_ausf_ip_addr = serviceDiscovery("ausf", consulAgent);
+	g_upf_smf_ip_addr = resolve_host("upf");
+	smf_amf_ip_addr = serviceDiscovery("smf", consulAgent);
+	g_upf_s1_ip_addr = resolve_host("upf");
+	g_upf_s11_ip_addr = resolve_host("upf");
+	g_udm_ip_addr = serviceDiscovery("udm", consulAgent);
 }
 
 void Amf::clrstl() {

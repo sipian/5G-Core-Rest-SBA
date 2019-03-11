@@ -3,16 +3,24 @@
 #include "ports.h"
 #include "rest_utils.h"
 
-// string g_ausf_ip_addr = "192.168.130.162";
-string g_ausf_ip_addr = resolve_host("ausf");
-int g_ausf_port = 6000;
+using namespace ppconsul;
+using ppconsul::Consul;
 
-// string g_udm_ip_addr = "192.168.130.120";
-string g_udm_ip_addr = resolve_host("udm");
-int g_udm_port = 6001;
+string g_ausf_ip_addr = "";
+string g_udm_ip_addr = "";
+int g_ausf_port = G_AUSF_PORT;
+int g_udm_port = G_UDM_PORT;
 
 Ausf::Ausf() {
 	g_sync.mux_init(mysql_client_mux);
+
+	Consul consul(CONSUL_ADDR);
+	agent::Agent consulAgent(consul);
+
+	serviceRegister("ausf", consulAgent);
+
+	g_ausf_ip_addr = getMyIPAddress();
+	g_udm_ip_addr = serviceDiscovery("udm", consulAgent);
 }
 
 void Ausf::handle_mysql_conn() {
