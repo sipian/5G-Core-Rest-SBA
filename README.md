@@ -7,19 +7,19 @@
 ```
 docker network create vepc
 
-docker run -ti --rm --name ran --cap-add NET_ADMIN --network vepc -v `pwd` :/code codeme0720/5g_sba:v1 /bin/bash
+docker run -ti --rm --name ran --cap-add NET_ADMIN --network vepc -v `pwd`:/code -w /code/src codeme0720/5g_sba:v1 /bin/bash
 
-docker run -ti --rm --name ausf --cap-add NET_ADMIN --network vepc -v `pwd` :/code codeme0720/5g_sba:v1 /bin/bash
+docker run -ti --rm --name ausf --cap-add NET_ADMIN --network vepc -v `pwd`:/code -w /code/src codeme0720/5g_sba:v1 /bin/bash
 
-docker run -ti --rm --name amf --cap-add NET_ADMIN --network vepc -v `pwd` :/code codeme0720/5g_sba:v1 /bin/bash
+docker run -ti --rm --name amf --cap-add NET_ADMIN --network vepc -v `pwd`:/code -w /code/src codeme0720/5g_sba:v1 /bin/bash
 
-docker run -ti --rm --name smf --cap-add NET_ADMIN --network vepc -v `pwd` :/code codeme0720/5g_sba:v1 /bin/bash
+docker run -ti --rm --name smf --cap-add NET_ADMIN --network vepc -v `pwd`:/code -w /code/src codeme0720/5g_sba:v1 /bin/bash
 
-docker run -ti --rm --name upf --cap-add NET_ADMIN --network vepc -v `pwd` :/code codeme0720/5g_sba:v1 /bin/bash
+docker run -ti --rm --name upf --cap-add NET_ADMIN --network vepc -v `pwd`:/code -w /code/src codeme0720/5g_sba:v1 /bin/bash
 
-docker run -ti --rm --name udm --cap-add NET_ADMIN --network vepc -v `pwd` :/code codeme0720/5g_sba:v1 /bin/bash
+docker run -ti --rm --name udm --cap-add NET_ADMIN --network vepc -v `pwd`:/code -w /code/src codeme0720/5g_sba:v1 /bin/bash
 
-docker run -ti --rm --name sink --cap-add NET_ADMIN --network vepc -v `pwd` :/code codeme0720/5g_sba:v1 /bin/bash
+docker run -ti --rm --name sink --cap-add NET_ADMIN --network vepc -v `pwd`:/code -w /code/src codeme0720/5g_sba:v1 /bin/bash
 ```
 
 ### Start Consul Server for NRF
@@ -35,7 +35,6 @@ Run the follow commands in every docker container shell
 
 ```
 export LD_LIBRARY_PATH=/usr/local/lib/
-cd code/src
 ```
 
 > Start the following modules in the order specified below.
