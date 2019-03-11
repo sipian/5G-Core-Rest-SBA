@@ -100,134 +100,134 @@ void handle(std::string route, http2 &server, void (*callback)(const response &r
 void handle_udm(int worker_id) {
 	http2 server;
     
-    handle("/Nudm_UECM/1", server, [](const response &res, Json::Value &jsonVal){
+    handle("/Nudm_UECM/GetAuthInfo", server, [](const response &res, Json::Value &jsonVal){
         TRACE(cout<<"udm server handle_udm: "<<"case: 1 handle_autn_info"<< endl;)
         res.write_head(200);
         res.end(g_udm.get_autn_info(jsonVal));
     });
 
-    handle("/Nudm_UECM/2", server, [](const response &res, Json::Value &jsonVal){
+    handle("/Nudm_UECM/SetLOCInfo", server, [](const response &res, Json::Value &jsonVal){
         TRACE(cout<<"udm server handle_udm: "<<"case: 2 handle_loc_update"<< endl;)
         g_udm.set_loc_info(jsonVal);
         res.write_head(200);
         res.end();
     });
 
-    handle("/Nudm_UECM/3", server, [](const response &res, Json::Value &jsonVal){
+    handle("/Nudm_UECM/UpdateInitialAttachInit", server, [](const response &res, Json::Value &jsonVal){
         TRACE(cout<<"udm_server handle_ue_updation"<<"case: 3 update from amf_handle_initial_attach_init"<<endl;)
         g_udm.update_info_amf_initial_attach_init(jsonVal);
         res.write_head(200);
         res.end();
     });
 
-    handle("/Nudm_UECM/4", server, [](const response &res, Json::Value &jsonVal){
+    handle("/Nudm_UECM/UpdateInitialAttach", server, [](const response &res, Json::Value &jsonVal){
         TRACE(cout<<"udm_server handle_ue_updation"<<"case: 4 update from amf_handle_initial_attach"<<endl;)
         g_udm.update_info_amf_initial_attach(jsonVal);
         res.write_head(200);
         res.end();
     });
     
-    handle("/Nudm_UECM/5", server, [](const response &res, Json::Value &jsonVal){
+    handle("/Nudm_UECM/UECtx/SetAuth", server, [](const response &res, Json::Value &jsonVal){
         TRACE(cout<<"udm server handle autn"<<"case: 5 ue ctx request from amf handle autn"<<endl;)
         res.write_head(200);
         res.end(g_udm.handle_autn_ue_ctx_request(jsonVal));
     });
 
-    handle("/Nudm_UECM/6", server, [](const response &res, Json::Value &jsonVal){
+    handle("/Nudm_UECM/UECtx/SetSecurityCmd", server, [](const response &res, Json::Value &jsonVal){
         TRACE(cout<<"udm_server ue_ctx requests"<<"case: 6 ue_ctx request from AMF_security mode cmd"<<endl;)
         res.write_head(200);
         res.end(g_udm.ue_ctx_request_security_mode_cmd(jsonVal));
     });
 
-    handle("/Nudm_UECM/7", server, [](const response &res, Json::Value &jsonVal){
+    handle("/Nudm_UECM/UECtx/SetCrypt", server, [](const response &res, Json::Value &jsonVal){
         TRACE(cout<<"udm server set encrypt context"<<"case: 7 ue ctx information for k_nas_enc"<<endl;)
         g_udm.ue_ctx_request_set_crypt_context(jsonVal);
         res.write_head(200);
         res.end();
     });
 
-    handle("/Nudm_UECM/8", server, [](const response &res, Json::Value &jsonVal){
+    handle("/Nudm_UECM/UECtx/SetIntegrity", server, [](const response &res, Json::Value &jsonVal){
         TRACE(cout<<"udm server set integrity context"<<endl;)
         g_udm.ue_ctx_update_set_integrity_context(jsonVal);
         res.write_head(200);
         res.end();
     });
 
-    handle("/Nudm_UECM/9", server, [](const response &res, Json::Value &jsonVal){
+    handle("/Nudm_UECM/UECtx/HandleSecurityMode", server, [](const response &res, Json::Value &jsonVal){
         TRACE(cout<<"udm server set encrypt context"<<"Case: 9 ue ctx update"<<endl;)
         res.write_head(200);
         res.end(g_udm.ue_ctx_request_handle_security_mode_complete(jsonVal));
     });
 
-    handle("/Nudm_UECM/10", server, [](const response &res, Json::Value &jsonVal){
+    handle("/Nudm_UECM/UECtx/HandleLocationUpdate", server, [](const response &res, Json::Value &jsonVal){
         TRACE(cout<<"udm server handle location update"<<"Case: 10 ue ctx request from location update"<<endl;)
         res.write_head(200);
         res.end(g_udm.ue_ctx_request_handle_location_update(jsonVal));
     });
 
-    handle("/Nudm_UECM/11", server, [](const response &res, Json::Value &jsonVal){
+    handle("/Nudm_UECM/UECtx/HandleCreateSessionBegin", server, [](const response &res, Json::Value &jsonVal){
         TRACE(cout<<"udm server request handle create session"<<"Case: 11 ue ctx update request for create session"<<endl;)
         res.write_head(200);
         res.end(g_udm.ue_ctx_request_handle_create_session(jsonVal));
     });
 
-    handle("/Nudm_UECM/12", server, [](const response &res, Json::Value &jsonVal){
+    handle("/Nudm_UECM/UECtx/HandleCreateSessionEnd", server, [](const response &res, Json::Value &jsonVal){
         TRACE(cout<<"udm server update handle create session"<<"Case: 12 ue ctx update request for create session"<<endl;)
         res.write_head(200);
         res.end(g_udm.ue_ctx_update_handle_craete_session(jsonVal));
     });
     
-    handle("/Nudm_UECM/13", server, [](const response &res, Json::Value &jsonVal){
+    handle("/Nudm_UECM/UECtx/HandleAttachComplete", server, [](const response &res, Json::Value &jsonVal){
         TRACE(cout<<"udm server request handle attach complete"<<"Case 13: "<<endl;)
         res.write_head(200);
         res.end(g_udm.ue_ctx_request_handle_attach_complete(jsonVal));
     });
 
-    handle("/Nudm_UECM/14", server, [](const response &res, Json::Value &jsonVal){
+    handle("/Nudm_UECM/UECtx/UpdateAttachComplete", server, [](const response &res, Json::Value &jsonVal){
         TRACE(cout<<"udm server update handle attach complete"<<"Case 14: "<<endl;)
         g_udm.ue_ctx_update_handle_attach_complete(jsonVal);
         res.write_head(200);
         res.end();
     });
 
-    handle("/Nudm_UECM/15", server, [](const response &res, Json::Value &jsonVal){
+    handle("/Nudm_UECM/UECtx/HandleModifyBearer", server, [](const response &res, Json::Value &jsonVal){
         TRACE(cout<<"udm server request handle modify bearer"<<"Case 15: "<<endl;)
         res.write_head(200);
         res.end(g_udm.ue_ctx_request_handle_modify_bearer(jsonVal));
     });
 
-    handle("/Nudm_UECM/16", server, [](const response &res, Json::Value &jsonVal){
+    handle("/Nudm_UECM/UECtx/HandleDetach", server, [](const response &res, Json::Value &jsonVal){
         TRACE(cout<<"udm server request from handle detach"<<"Case 16: "<<endl;)
         res.write_head(200);
         res.end(g_udm.ue_ctx_request_handle_detach(jsonVal));
     });
 
-    handle("/Nudm_UECM/17", server, [](const response &res, Json::Value &jsonVal){
+    handle("/Nudm_UECM/UECtx/SetUPFInfo", server, [](const response &res, Json::Value &jsonVal){
         TRACE(cout<<"udm server update from set upf info"<<"Case 17: "<<endl;)
         g_udm.ue_ctx_update_set_upf_info(jsonVal);
         res.write_head(200);
         res.end();
     });
 
-    handle("/Nudm_UECM/18", server, [](const response &res, Json::Value &jsonVal){
+    handle("/Nudm_UECM/UECtx/RequestSMFCreateSession", server, [](const response &res, Json::Value &jsonVal){
         TRACE(cout<<"udm server request from SMF handle create session"<<"Case 18: "<<endl;)
         res.write_head(200);
         res.end(g_udm.ue_ctx_request_smf_handle_create_session(jsonVal));
     });
 
-    handle("/Nudm_UECM/19", server, [](const response &res, Json::Value &jsonVal){
+    handle("/Nudm_UECM/UECtx/UpdateSMFCreateSession", server, [](const response &res, Json::Value &jsonVal){
         TRACE(cout<<"udm server request from SMF handle create session"<<"Case 19: "<<endl;)
         res.write_head(200);
         res.end(g_udm.ue_ctx_update_smf_handle_create_session(jsonVal));
     });
 
-    handle("/Nudm_UECM/20", server, [](const response &res, Json::Value &jsonVal){
+    handle("/Nudm_UECM/UECtx/RequestSMFModifyBearer", server, [](const response &res, Json::Value &jsonVal){
         TRACE(cout<<"udm server request from SMF handle modify bearer"<<"Case 20: "<<endl;)
         res.write_head(200);
         res.end(g_udm.ue_ctx_request_smf_handle_modify_bearer(jsonVal));
     });
 
-    handle("/Nudm_UECM/21", server, [](const response &res, Json::Value &jsonVal){
+    handle("/Nudm_UECM/UECtx/RequestSMFDetach", server, [](const response &res, Json::Value &jsonVal){
         TRACE(cout<<"udm server request from smf handle detach"<<"Case 21: "<<endl;)
         res.write_head(200);
         res.end(g_udm.ue_ctx_request_smf_handle_detach(jsonVal));

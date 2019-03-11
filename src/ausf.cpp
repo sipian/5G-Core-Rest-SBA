@@ -55,7 +55,7 @@ std::string Ausf::handle_autninfo_req(Json::Value &jsonPkt, int worker_id) {
 	bool parsingSuccessful = send_and_receive(
 		g_udm_ip_addr, 
 		UDM_PORT_START_RANGE + worker_id, 
-		"/Nudm_UECM/1",
+		"/Nudm_UECM/GetAuthInfo",
 		reqPkt, jsonRes
 	);
 
@@ -99,7 +99,7 @@ std::string Ausf::handle_location_update(Json::Value &jsonPkt, int worker_id) {
 	send_and_receive(
 		g_udm_ip_addr, 
 		UDM_PORT_START_RANGE + worker_id, 
-		"/Nudm_UECM/2",
+		"/Nudm_UECM/SetLOCInfo",
 		reqPkt, jsonRes
 	);
 
